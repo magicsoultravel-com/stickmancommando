@@ -9,7 +9,10 @@
   var overlayHint = document.getElementById('overlay-hint');
   var modePicker = document.getElementById('mode-picker');
   var startBtn = document.getElementById('start-btn');
-  var modesBtn = document.getElementById('modes-btn');
+  var autoshootBtn = document.getElementById('autoshoot-btn');
+  var hudAutoshoot = document.getElementById('hud-autoshoot');
+  var exitBtn = document.getElementById('exit-btn');
+  var characterPicker = document.getElementById('character-picker');
   var modeBadge = document.getElementById('mode-badge');
   var waveBanner = document.getElementById('wave-banner');
   var healthFill = document.getElementById('health-fill');
@@ -19,73 +22,78 @@
 
   var GROUND_Y = canvas.height - 80;
   var ZOMBIE_GRID = 48;
+  var AUTO_SHOOT_KEY = 'stickmanCommandoAutoshoot';
+  var CHARACTER_KEY = 'stickmanCommandoCharacter';
   var HIGH_SCORE_PREFIX = 'stickmanCommandoHighScore_';
   var STATE = { INTRO: 'intro', MODES: 'modes', PLAYING: 'playing', GAMEOVER: 'gameover' };
 
   var MODES = [
     {
       id: 'zombie',
-      name: 'Zombie',
-      desc: 'The dead keep coming. Slow walkers, endless horde — hold your ground.',
-      hint: '↑ ↓ ← → move · SPACE shoot · survive the swarm'
+      name: 'Zombie Arena',
+      desc: 'Grid-lane horde. Every 10 kills a slow brute rises — 10 hits to drop it.',
+      hint: '↑ ↓ ← → or mouse · SPACE shoot · nail the brutes'
     },
     {
       id: 'animatedxl',
       name: 'Animated XL',
-      desc: 'Big scrollable wilds — hills, rivers, bridges, trees. Lean stickmen, enemy fire, walk cycles.',
-      hint: '↑ ↓ ← → explore · SPACE shoot · dodge red bullets · use bridges over rivers'
+      desc: 'Big scrollable wilds — hills, rivers, bridges, trees. Lean stickmen, enemy fire.',
+      hint: '↑ ↓ ← → or mouse · SPACE · dodge red bullets · use bridges'
     },
     {
-      id: 'dronechase',
-      name: 'Drone chase',
-      desc: 'Ride in the truck bed down a brutal road. Aim the crosshair — it sways with every bump.',
-      hint: '↑ ↓ ← → aim · SPACE shoot · don\'t let drones reach the truck'
+      id: 'dronedrive',
+      name: 'Drone Drive',
+      desc: 'Terminator-style truck bed turret. Insane road, crosshair sways — pick off chasing drones.',
+      hint: '↑ ↓ ← → or mouse aim · SPACE shoot · hold on tight'
     },
     {
-      id: 'sidescroll',
-      name: 'Side-scroll',
-      desc: 'Classic run-and-gun. Move, jump, shoot left or right.',
-      hint: '← → move · ↑ jump · SPACE shoot'
+      id: 'jetside',
+      name: 'Jet Side',
+      desc: 'Jetpack between three lanes. Shoot baddies, dodge debris.',
+      hint: '↑ ↓ change lane · → thrust · SPACE shoot · mouse aim'
     },
     {
       id: 'shooters',
       name: 'Enemy fire',
       desc: 'Hostiles shoot back when in range. Keep moving.',
-      hint: '↑ ↓ ← → move · SPACE shoot · dodge red bullets'
+      hint: '↑ ↓ ← → or mouse · SPACE shoot · dodge red bullets'
     },
     {
       id: 'waves',
       name: 'Waves',
       desc: 'Clear each wave, short breather, then the next wave hits harder.',
-      hint: '↑ ↓ ← → move · SPACE shoot · survive each wave'
+      hint: '↑ ↓ ← → or mouse · SPACE shoot · survive each wave'
     },
     {
       id: 'medkits',
       name: 'Medkits',
       desc: 'Kills sometimes drop green medkits. Walk over them to heal.',
-      hint: '↑ ↓ ← → move · SPACE shoot · grab green crosses'
+      hint: '↑ ↓ ← → or mouse · SPACE shoot · grab green crosses'
     },
     {
       id: 'variants',
       name: 'Enemy types',
       desc: 'Orange runners, red grunts, purple tanks — different speed and HP.',
-      hint: '↑ ↓ ← → move · SPACE shoot · prioritize targets'
+      hint: '↑ ↓ ← → or mouse · SPACE shoot · prioritize targets'
     },
     {
       id: 'leaderboard',
       name: 'Leaderboard demo',
-      desc: 'Zombie horde with a mock global scoreboard on game over (not live yet).',
-      hint: '↑ ↓ ← → move · SPACE shoot · see mock ranks on death'
+      desc: 'Zombie Arena with a mock global scoreboard on game over (not live yet).',
+      hint: '↑ ↓ ← → or mouse · SPACE shoot · see mock ranks on death'
     }
   ];
 
   var ENEMY_TYPES = {
     walker: { color: '#7d9a6a', speed: 32, health: 1, radius: 11, scale: 1, score: 5, zombie: true },
+    brute: { color: '#4a3355', speed: 22, health: 10, radius: 18, scale: 1.45, score: 100, zombie: true, isBrute: true },
     grunt: { color: '#f85149', speed: 55, health: 1, radius: 12, scale: 1, score: 10 },
     runner: { color: '#ffa657', speed: 110, health: 1, radius: 10, scale: 0.9, score: 15 },
     tank: { color: '#bc8cff', speed: 35, health: 3, radius: 16, scale: 1.3, score: 30 },
     drone: { color: '#c9d1d9', speed: 95, health: 1, radius: 10, scale: 0.75, score: 20, isDrone: true }
   };
+
+  var JET_LANES = [130, 270, 410];
 
   var MOCK_LEADERBOARD = [
     { name: 'GhostOps', score: 1240 },
@@ -120,9 +128,16 @@
   var maxEnemies = 12;
 
   var wave = { number: 0, toSpawn: 0, phase: 'break', breakTimer: 0, bannerTimer: 0 };
+  var zombieKillCount = 0;
+  var obstacles = [];
+  var autoShoot = localStorage.getItem(AUTO_SHOOT_KEY) === '1';
+  var characterModel = localStorage.getItem(CHARACTER_KEY) || 'classic';
+  var mouse = { x: 0, y: 0, down: false, active: false };
 
+  buildCharacterPicker();
   buildModePicker();
   setCanvasForMode();
+  syncAutoshootUi();
   loadHighScoreForMode(currentMode);
 
   function isTopDown() {
@@ -135,8 +150,108 @@
     return currentMode === 'animatedxl';
   }
 
-  function isDroneChase() {
-    return currentMode === 'dronechase';
+  function isDroneDrive() {
+    return currentMode === 'dronedrive';
+  }
+
+  function isJetSide() {
+    return currentMode === 'jetside';
+  }
+
+  function usesMouseMove() {
+    return isTopDown() || isXLMode() || currentMode === 'shooters' ||
+      currentMode === 'waves' || currentMode === 'medkits' || currentMode === 'variants';
+  }
+
+  function syncAutoshootUi() {
+    var label = autoShoot ? 'Auto: ON' : 'Auto: OFF';
+    autoshootBtn.textContent = label;
+    autoshootBtn.classList.toggle('on', autoShoot);
+    hudAutoshoot.textContent = label;
+    hudAutoshoot.classList.toggle('on', autoShoot);
+  }
+
+  function toggleAutoshoot() {
+    autoShoot = !autoShoot;
+    localStorage.setItem(AUTO_SHOOT_KEY, autoShoot ? '1' : '0');
+    syncAutoshootUi();
+  }
+
+  function buildCharacterPicker() {
+    if (!window.CharacterModels) return;
+    characterPicker.innerHTML = '<p class="picker-label">Commando model</p>';
+    CharacterModels.list.forEach(function (model) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'char-card' + (model.id === characterModel ? ' selected' : '');
+      btn.textContent = model.name;
+      btn.dataset.char = model.id;
+      btn.addEventListener('click', function () {
+        characterModel = model.id;
+        localStorage.setItem(CHARACTER_KEY, characterModel);
+        buildCharacterPicker();
+      });
+      characterPicker.appendChild(btn);
+    });
+  }
+
+  function canvasPoint(evt) {
+    var rect = canvas.getBoundingClientRect();
+    var sx = canvas.width / rect.width;
+    var sy = canvas.height / rect.height;
+    return {
+      x: (evt.clientX - rect.left) * sx,
+      y: (evt.clientY - rect.top) * sy
+    };
+  }
+
+  function getWorldMouse() {
+    if (isXLMode() && player) {
+      return { x: mouse.x + camera.x, y: mouse.y + camera.y };
+    }
+    return { x: mouse.x, y: mouse.y };
+  }
+
+  function applyMouseAim() {
+    if (!player || !mouse.active) return;
+    var wm = getWorldMouse();
+    var dx = wm.x - player.x;
+    var dy = wm.y - player.y;
+    if (Math.hypot(dx, dy) > 8) {
+      var len = Math.hypot(dx, dy);
+      player.aimX = dx / len;
+      player.aimY = dy / len;
+    }
+  }
+
+  function applyMouseMove(dt) {
+    if (!player || !mouse.active || !usesMouseMove()) return;
+    var wm = getWorldMouse();
+    var dx = wm.x - player.x;
+    var dy = wm.y - player.y;
+    var dist = Math.hypot(dx, dy);
+    if (dist > 18) {
+      var spd = player.speed * 0.85 * dt;
+      player.x += (dx / dist) * Math.min(spd, dist);
+      player.y += (dy / dist) * Math.min(spd, dist);
+      if (isXLMode()) {
+        if (!XLMode.isWalkable(player.x, player.y)) {
+          player.x -= (dx / dist) * Math.min(spd, dist);
+          player.y -= (dy / dist) * Math.min(spd, dist);
+        }
+      } else {
+        player.x = Math.max(20, Math.min(canvas.width - 20, player.x));
+        player.y = Math.max(20, Math.min(canvas.height - 20, player.y));
+      }
+    }
+  }
+
+  function exitToMenu() {
+    state = STATE.MODES;
+    exitBtn.hidden = true;
+    hudAutoshoot.hidden = true;
+    Gore.clear();
+    showModeSelect();
   }
 
   function buildModePicker() {
@@ -149,6 +264,8 @@
       card.innerHTML = '<h3>' + mode.name + '</h3><p>' + mode.desc + '</p>';
       card.addEventListener('click', function () {
         selectMode(mode.id);
+        GameAudio.resume();
+        GameAudio.playModeTune(mode.id);
       });
       modePicker.appendChild(card);
     });
@@ -196,6 +313,12 @@
     if (!stored && modeId === 'zombie') {
       stored = localStorage.getItem(HIGH_SCORE_PREFIX + 'arena');
     }
+    if (!stored && modeId === 'jetside') {
+      stored = localStorage.getItem(HIGH_SCORE_PREFIX + 'sidescroll');
+    }
+    if (!stored && modeId === 'dronedrive') {
+      stored = localStorage.getItem(HIGH_SCORE_PREFIX + 'dronechase');
+    }
     highScore = stored ? parseInt(stored, 10) : 0;
     highScoreEl.textContent = highScore;
   }
@@ -212,6 +335,7 @@
       bumpY: 0,
       bumpVel: 0,
       pitch: 0,
+      roll: 0,
       inertiaX: 0,
       inertiaY: 0,
       bedCX: canvas.width / 2,
@@ -238,7 +362,7 @@
       };
     }
 
-    if (isDroneChase()) {
+    if (isDroneDrive()) {
       return {
         offsetX: 0,
         offsetY: 0,
@@ -255,7 +379,26 @@
       };
     }
 
-    var isSide = currentMode === 'sidescroll';
+    if (isJetSide()) {
+      return {
+        x: 100,
+        y: JET_LANES[1],
+        targetLane: 1,
+        vx: 0,
+        speed: 280,
+        radius: 14,
+        health: 100,
+        maxHealth: 100,
+        aimX: 1,
+        aimY: 0,
+        facing: 1,
+        shootCooldown: 0,
+        invuln: 0,
+        thrust: 0
+      };
+    }
+
+    var isSide = false;
     return {
       x: isSide ? 120 : canvas.width / 2,
       y: isSide ? GROUND_Y : canvas.height / 2,
@@ -284,9 +427,11 @@
     enemies = [];
     particles = [];
     pickups = [];
-    truck = isDroneChase() ? createTruck() : null;
+    truck = isDroneDrive() ? createTruck() : null;
     camera = { x: 0, y: 0 };
     animTime = 0;
+    zombieKillCount = 0;
+    obstacles = [];
     score = 0;
     spawnTimer = 0;
     difficultyTimer = 0;
@@ -298,7 +443,7 @@
     } else if (currentMode === 'zombie') {
       spawnInterval = 0.35;
       maxEnemies = 50;
-    } else if (currentMode === 'dronechase') {
+    } else if (currentMode === 'dronedrive') {
       spawnInterval = 1.6;
       maxEnemies = 10;
     } else {
@@ -330,7 +475,8 @@
     overlayTitle.textContent = title;
     overlaySubtitle.textContent = subtitle;
     startBtn.hidden = !options.showDeploy;
-    modesBtn.hidden = !options.showModes;
+    autoshootBtn.hidden = !options.showDeploy;
+    characterPicker.hidden = !options.showPicker;
     modePicker.hidden = !options.showPicker;
     startBtn.textContent = options.deployLabel || 'Deploy';
 
@@ -376,14 +522,17 @@
     pickups = [];
     selectMode(currentMode);
     showOverlay('Pick a demo', getMode().desc, {
-      showPicker: true, showDeploy: true, showModes: false, deployLabel: 'Deploy'
+      showPicker: true, showDeploy: true, deployLabel: 'Deploy'
     });
+    GameAudio.playModeTune(currentMode);
   }
 
   function startGame() {
     resetGame();
     state = STATE.PLAYING;
     hideOverlay();
+    exitBtn.hidden = false;
+    hudAutoshoot.hidden = false;
     GameAudio.resume();
   }
 
@@ -399,11 +548,12 @@
       'Score: ' + score + (score >= highScore && score > 0 ? ' — New best!' : ''),
       {
         showDeploy: true,
-        showModes: true,
         deployLabel: 'Redeploy',
         mockLeaderboard: currentMode === 'leaderboard'
       }
     );
+    exitBtn.hidden = false;
+    hudAutoshoot.hidden = true;
   }
 
   function startNextWave() {
@@ -417,9 +567,10 @@
   }
 
   function roadProfile(t) {
-    return Math.sin(t * 0.007) * 35 +
-      Math.sin(t * 0.019) * 18 +
-      Math.sin(t * 0.003) * 55;
+    return Math.sin(t * 0.007) * 55 +
+      Math.sin(t * 0.019) * 28 +
+      Math.sin(t * 0.003) * 90 +
+      Math.sin(t * 0.0012) * 120;
   }
 
   function roadSlope(t) {
@@ -449,6 +600,7 @@
       shootCooldown: 1 + Math.random(),
       isDrone: !!type.isDrone,
       isZombie: !!type.zombie,
+      isBrute: !!type.isBrute,
       weave: Math.random() * Math.PI * 2,
       z: extra.z || 0,
       animPhase: Math.random() * 10
@@ -484,6 +636,23 @@
     }
   }
 
+  function spawnBrute() {
+    var margin = 50;
+    var edge = Math.floor(Math.random() * 4);
+    var x;
+    var y;
+    if (edge === 0) { x = Math.random() * canvas.width; y = -margin; }
+    else if (edge === 1) { x = canvas.width + margin; y = Math.random() * canvas.height; }
+    else if (edge === 2) { x = Math.random() * canvas.width; y = canvas.height + margin; }
+    else { x = -margin; y = Math.random() * canvas.height; }
+    if (edge === 0 || edge === 2) x = snapGrid(x);
+    else y = snapGrid(y);
+    spawnEnemyAt(x, y, 'brute');
+    waveBanner.textContent = 'BRUTE!';
+    waveBanner.classList.add('visible');
+    setTimeout(function () { waveBanner.classList.remove('visible'); }, 1200);
+  }
+
   function spawnWalkerBurst() {
     var n = 2 + Math.floor(Math.random() * 2);
     for (var i = 0; i < n; i++) spawnTopDownEnemy();
@@ -502,9 +671,20 @@
     }
   }
 
-  function spawnSideEnemy() {
-    spawnEnemyAt(canvas.width + 40, GROUND_Y, 'grunt');
-    enemies[enemies.length - 1].speed = 70 + Math.random() * 30;
+  function spawnJetEnemy() {
+    var lane = Math.floor(Math.random() * 3);
+    spawnEnemyAt(canvas.width + 50, JET_LANES[lane], 'grunt');
+    enemies[enemies.length - 1].speed = 120 + Math.random() * 60;
+  }
+
+  function spawnJetObstacle() {
+    var lane = Math.floor(Math.random() * 3);
+    obstacles.push({
+      x: canvas.width + 40,
+      y: JET_LANES[lane],
+      radius: 16,
+      speed: 180 + Math.random() * 40
+    });
   }
 
   function spawnDrone() {
@@ -527,10 +707,10 @@
     var dx = player.aimX;
     var dy = player.aimY;
 
-    if (currentMode === 'sidescroll') {
-      dx = player.facing;
+    if (isJetSide()) {
+      dx = 1;
       dy = 0;
-    } else if (isDroneChase()) {
+    } else if (isDroneDrive()) {
       dx = 0;
       dy = -1;
     }
@@ -540,17 +720,17 @@
     dy /= len;
 
     var startX = player.x + dx * 8;
-    var startY = player.y + dy * 8 - (currentMode === 'sidescroll' ? 10 : 0);
+    var startY = player.y + dy * 8 - (isJetSide() ? 10 : 0);
 
     bullets.push({
       x: startX,
       y: startY,
-      vx: dx * (isDroneChase() ? 680 : 520),
-      vy: dy * (isDroneChase() ? 680 : 520),
-      life: isDroneChase() ? 1.5 : 1.2
+      vx: dx * (isDroneDrive() ? 680 : 520),
+      vy: dy * (isDroneDrive() ? 680 : 520),
+      life: isDroneDrive() ? 1.5 : 1.2
     });
 
-    player.shootCooldown = isDroneChase() ? 0.14 : 0.18;
+    player.shootCooldown = isDroneDrive() ? 0.14 : 0.18;
   }
 
   function enemyShoot(enemy) {
@@ -589,7 +769,7 @@
     player.health -= amount;
     player.invuln = 0.8;
     shakeTimer = 0.25;
-    spawnParticles(player.x, player.y, isDroneChase() ? '#e3b341' : '#58a6ff', 6);
+    spawnParticles(player.x, player.y, isDroneDrive() ? '#e3b341' : '#58a6ff', 6);
     updateHud();
     if (player.health <= 0) endGame();
   }
@@ -599,7 +779,15 @@
     score += e.points || 10;
     spawnParticles(e.x, e.y, e.color || '#f85149', e.isDrone ? 12 : 8);
 
-    if (e.isZombie && window.Gore) {
+    if (e.isZombie && !e.isBrute && (currentMode === 'zombie' || currentMode === 'leaderboard')) {
+      zombieKillCount += 1;
+      if (zombieKillCount % 10 === 0) spawnBrute();
+    }
+
+    if (e.isBrute && window.Gore) {
+      Gore.spawnExplosion(e.x, e.y, e.color, hitAngle);
+      Gore.spawnExplosion(e.x, e.y, e.color, (hitAngle || 0) + 1);
+    } else if (e.isZombie && window.Gore) {
       Gore.spawnExplosion(e.x, e.y, e.color || '#7d9a6a', hitAngle);
     }
 
@@ -624,7 +812,7 @@
       return;
     }
 
-    if (isDroneChase()) {
+    if (isDroneDrive()) {
       spawnTimer += dt;
       if (spawnTimer >= spawnInterval && enemies.length < maxEnemies) {
         spawnTimer = 0;
@@ -635,12 +823,13 @@
       return;
     }
 
-    if (currentMode === 'sidescroll') {
+    if (isJetSide()) {
       spawnTimer += dt;
-      if (spawnTimer >= 2.5 && enemies.length < 6) {
+      if (spawnTimer >= 1.8 && enemies.length < 8) {
         spawnTimer = 0;
-        spawnSideEnemy();
+        spawnJetEnemy();
       }
+      if (Math.random() < dt * 0.35) spawnJetObstacle();
       return;
     }
 
@@ -699,16 +888,17 @@
 
   function updateDroneChase(dt) {
     truck.roadT += truck.speed * dt;
-    var targetBump = roadProfile(truck.roadT) * 0.35;
-    truck.bumpVel += (targetBump - truck.bumpY) * 6 * dt;
-    truck.bumpVel *= 0.92;
+    var targetBump = roadProfile(truck.roadT) * 0.55;
+    truck.bumpVel += (targetBump - truck.bumpY) * 8 * dt;
+    truck.bumpVel *= 0.88;
     truck.bumpY += truck.bumpVel * dt;
-    truck.pitch = roadSlope(truck.roadT) * 0.55;
+    truck.pitch = roadSlope(truck.roadT) * 0.85;
+    truck.roll = Math.sin(truck.roadT * 0.011) * 0.12 + truck.bumpVel * 0.008;
 
-    truck.inertiaX += truck.bumpVel * 0.04;
-    truck.inertiaY += truck.pitch * 22 * dt;
-    truck.inertiaX *= 0.88;
-    truck.inertiaY *= 0.88;
+    truck.inertiaX += truck.bumpVel * 0.06 + truck.roll * 40 * dt;
+    truck.inertiaY += truck.pitch * 32 * dt;
+    truck.inertiaX *= 0.86;
+    truck.inertiaY *= 0.86;
 
     var moveX = 0;
     var moveY = 0;
@@ -717,17 +907,24 @@
     if (keys['ArrowUp']) moveY -= 1;
     if (keys['ArrowDown']) moveY += 1;
 
+    if (mouse.active && isDroneDrive()) {
+      var aimDx = mouse.x - (truck.bedCX + player.offsetX);
+      var aimDy = mouse.y - (truck.bedCY + player.offsetY);
+      moveX += Math.max(-1, Math.min(1, aimDx / 80));
+      moveY += Math.max(-1, Math.min(1, aimDy / 50));
+    }
+
     if (moveX !== 0 || moveY !== 0) {
       var ml = Math.hypot(moveX, moveY);
       player.offsetX += (moveX / ml) * player.speed * dt;
       player.offsetY += (moveY / ml) * player.speed * dt;
     }
 
-    player.offsetX = Math.max(-72, Math.min(72, player.offsetX));
-    player.offsetY = Math.max(-28, Math.min(28, player.offsetY));
+    player.offsetX = Math.max(-85, Math.min(85, player.offsetX));
+    player.offsetY = Math.max(-35, Math.min(35, player.offsetY));
 
-    player.x = truck.bedCX + player.offsetX + truck.inertiaX + truck.bumpY * 0.15;
-    player.y = truck.bedCY + player.offsetY + truck.inertiaY + truck.bumpY * 0.45;
+    player.x = truck.bedCX + player.offsetX + truck.inertiaX + truck.bumpY * 0.22 + truck.roll * 30;
+    player.y = truck.bedCY + player.offsetY + truck.inertiaY + truck.bumpY * 0.55;
     player.aimX = 0;
     player.aimY = -1;
   }
@@ -758,6 +955,11 @@
     player.x = Math.max(24, Math.min(XLMode.worldPixelW - 24, player.x));
     player.y = Math.max(24, Math.min(XLMode.worldPixelH - 24, player.y));
 
+    if (isXLMode()) {
+      applyMouseAim();
+      applyMouseMove(dt);
+    }
+
     camera.x = player.x - canvas.width / 2;
     camera.y = player.y - canvas.height / 2;
     camera.x = Math.max(0, Math.min(XLMode.worldPixelW - canvas.width, camera.x));
@@ -770,7 +972,7 @@
       return;
     }
 
-    if (isDroneChase()) {
+    if (isDroneDrive()) {
       updateDroneChase(dt);
       return;
     }
@@ -778,30 +980,31 @@
     player.vx = 0;
     player.vy = 0;
 
-    if (currentMode === 'sidescroll') {
-      if (keys['ArrowLeft']) { player.vx -= 1; player.facing = -1; }
-      if (keys['ArrowRight']) { player.vx += 1; player.facing = 1; }
-      player.aimX = player.facing;
+    if (isJetSide()) {
+      if (keys['ArrowUp']) player.targetLane = Math.max(0, player.targetLane - 1);
+      if (keys['ArrowDown']) player.targetLane = Math.min(2, player.targetLane + 1);
+      var targetY = JET_LANES[player.targetLane];
+      player.y += (targetY - player.y) * 8 * dt;
+      if (keys['ArrowRight']) player.x += player.speed * dt;
+      if (keys['ArrowLeft']) player.x -= player.speed * 0.5 * dt;
+      player.thrust = keys['ArrowRight'] ? 1 : 0;
+      player.x = Math.max(60, Math.min(canvas.width - 40, player.x));
+      player.aimX = 1;
       player.aimY = 0;
-
-      if (keys['ArrowUp'] && player.grounded) {
-        player.vy = -player.jumpForce;
-        player.grounded = false;
+      if (mouse.active) {
+        var bestLane = 0;
+        var bestDist = Infinity;
+        for (var li = 0; li < JET_LANES.length; li++) {
+          var ld = Math.abs(mouse.y - JET_LANES[li]);
+          if (ld < bestDist) { bestDist = ld; bestLane = li; }
+        }
+        player.targetLane = bestLane;
       }
-
-      player.vy += 900 * dt;
-      player.x += player.vx * player.speed * dt;
-      player.y += player.vy * dt;
-
-      if (player.y >= GROUND_Y) {
-        player.y = GROUND_Y;
-        player.vy = 0;
-        player.grounded = true;
-      }
-
-      player.x = Math.max(30, Math.min(canvas.width - 30, player.x));
       return;
     }
+
+    applyMouseAim();
+    applyMouseMove(dt);
 
     if (keys['ArrowLeft']) player.vx -= 1;
     if (keys['ArrowRight']) player.vx += 1;
@@ -828,6 +1031,7 @@
     updateMovement(dt);
 
     if (keys[' '] || keys['Space']) shoot();
+    else if (autoShoot) shoot();
 
     if (player.shootCooldown > 0) player.shootCooldown -= dt;
     if (player.invuln > 0) player.invuln -= dt;
@@ -901,7 +1105,7 @@
           spawnParticles(enemy.x, enemy.y, '#ff7b72', 10);
           continue;
         }
-      } else if (currentMode === 'sidescroll') {
+      } else if (isJetSide()) {
         enemy.x -= enemy.speed * dt;
         if (enemy.x < -40) {
           enemies.splice(k, 1);
@@ -938,7 +1142,21 @@
       }
 
       if (!enemy.isDrone && dist(enemy.x, enemy.y, player.x, player.y) < enemy.radius + player.radius) {
-        hurtPlayer(currentMode === 'sidescroll' ? 25 : (enemy.isZombie ? 12 : 18));
+        hurtPlayer(isJetSide() ? 20 : (enemy.isBrute ? 28 : (enemy.isZombie ? 12 : 18)));
+      }
+    }
+
+    for (var oi = obstacles.length - 1; oi >= 0; oi--) {
+      var obs = obstacles[oi];
+      obs.x -= obs.speed * dt;
+      if (obs.x < -40) {
+        obstacles.splice(oi, 1);
+        continue;
+      }
+      if (dist(obs.x, obs.y, player.x, player.y) < obs.radius + player.radius) {
+        hurtPlayer(22);
+        obstacles.splice(oi, 1);
+        spawnParticles(obs.x, obs.y, '#8b949e', 8);
       }
     }
 
@@ -976,7 +1194,7 @@
     ctx.rotate(lean);
 
     ctx.strokeStyle = color;
-    ctx.lineWidth = 2.5;
+    ctx.lineWidth = options.brute ? 3.5 : 2.5;
     ctx.lineCap = 'round';
 
     ctx.beginPath();
@@ -1070,118 +1288,172 @@
     ctx.restore();
   }
 
-  function drawDroneChaseScene() {
+  function drawJetPlayer(p) {
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.strokeStyle = '#58a6ff';
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.arc(0, -10, 5, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(0, -5);
+    ctx.lineTo(0, 10);
+    ctx.moveTo(0, 0);
+    ctx.lineTo(-8, 6);
+    ctx.moveTo(0, 0);
+    ctx.lineTo(10, 2);
+    ctx.stroke();
+    ctx.fillStyle = '#58a6ff';
+    ctx.fillRect(-10, 8, 8, 12);
+    ctx.fillRect(2, 8, 8, 12);
+    if (p.thrust) {
+      ctx.fillStyle = '#ffa657';
+      ctx.beginPath();
+      ctx.moveTo(-8, 20);
+      ctx.lineTo(-4, 32 + Math.random() * 8);
+      ctx.lineTo(0, 20);
+      ctx.lineTo(4, 32 + Math.random() * 8);
+      ctx.lineTo(8, 20);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function drawDroneDriveScene() {
     var bump = truck.bumpY;
     var pitch = truck.pitch;
+    var roll = truck.roll || 0;
+    var cx = canvas.width / 2;
 
     var sky = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    sky.addColorStop(0, '#0d1520');
-    sky.addColorStop(0.55, '#1a2840');
-    sky.addColorStop(1, '#2a1f18');
+    sky.addColorStop(0, '#050810');
+    sky.addColorStop(0.45, '#1a2030');
+    sky.addColorStop(1, '#2a1810');
     ctx.fillStyle = sky;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     ctx.save();
-    ctx.translate(0, bump * 0.6);
-    ctx.rotate(pitch * 0.08);
+    ctx.translate(cx, canvas.height * 0.42 + bump * 0.5);
+    ctx.rotate(roll * 0.15);
 
-    for (var m = 0; m < 6; m++) {
-      var mx = (m * 220 - (truck.roadT * 0.15) % 220);
-      ctx.fillStyle = 'rgba(30, 40, 55, 0.85)';
+    ctx.fillStyle = '#1f2937';
+    for (var m = -3; m < 4; m++) {
+      var mx = m * 200 - (truck.roadT * 0.2) % 200;
       ctx.beginPath();
-      ctx.moveTo(mx, 180);
-      ctx.lineTo(mx + 80, 120);
-      ctx.lineTo(mx + 160, 180);
-      ctx.closePath();
+      ctx.moveTo(mx, 60);
+      ctx.lineTo(mx + 60, -40);
+      ctx.lineTo(mx + 120, 60);
       ctx.fill();
     }
 
-    var horizonY = 200 + bump * 0.3;
-    ctx.fillStyle = '#3d2e24';
+    var horizonY = 80 + bump * 0.2;
+    ctx.fillStyle = '#3a2a20';
     ctx.beginPath();
-    ctx.moveTo(0, horizonY);
-    ctx.lineTo(canvas.width, horizonY);
-    ctx.lineTo(canvas.width, canvas.height);
-    ctx.lineTo(0, canvas.height);
+    ctx.moveTo(-cx, horizonY);
+    ctx.lineTo(cx, horizonY);
+    ctx.lineTo(cx + 200, canvas.height);
+    ctx.lineTo(-cx - 200, canvas.height);
     ctx.closePath();
     ctx.fill();
 
-    ctx.strokeStyle = 'rgba(230, 200, 120, 0.35)';
-    ctx.lineWidth = 2;
-    var stripeOffset = (truck.roadT * 1.4) % 60;
-    for (var s = -1; s < 14; s++) {
-      var sy = horizonY + 40 + s * 60 + stripeOffset;
-      var spread = (sy - horizonY) * 0.4;
+    ctx.fillStyle = '#2a2018';
+    ctx.beginPath();
+    ctx.moveTo(-cx, horizonY);
+    ctx.lineTo(cx, horizonY);
+    ctx.lineTo(cx, canvas.height);
+    ctx.lineTo(-cx, canvas.height);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.strokeStyle = 'rgba(255, 220, 120, 0.45)';
+    ctx.lineWidth = 3;
+    var stripeOffset = (truck.roadT * 2.2) % 80;
+    for (var s = 0; s < 16; s++) {
+      var sy = horizonY + 30 + s * 55 + stripeOffset;
+      var t = (sy - horizonY) / (canvas.height - horizonY);
+      var halfW = 8 + t * cx * 0.85;
       ctx.beginPath();
-      ctx.moveTo(canvas.width / 2 - 4 - spread, sy);
-      ctx.lineTo(canvas.width / 2 + 4 + spread, sy);
+      ctx.moveTo(-halfW, sy);
+      ctx.lineTo(halfW, sy);
       ctx.stroke();
     }
-
     ctx.restore();
 
-    var bedY = truck.bedCY + bump * 0.45;
-    ctx.fillStyle = '#2d333b';
-    ctx.fillRect(0, bedY + 20, canvas.width, canvas.height - bedY);
-
-    ctx.fillStyle = '#484f58';
-    ctx.fillRect(canvas.width / 2 - 130, bedY - 10, 260, 55);
+    var bedY = truck.bedCY + bump * 0.5;
+    ctx.save();
+    ctx.translate(cx + roll * 40, bedY);
+    ctx.fillStyle = '#1a1f26';
+    ctx.fillRect(-180, 0, 360, 120);
+    ctx.fillStyle = '#3d444d';
+    ctx.fillRect(-160, -55, 320, 70);
     ctx.fillStyle = '#21262d';
-    ctx.fillRect(canvas.width / 2 - 118, bedY - 4, 236, 42);
-
+    ctx.fillRect(-145, -48, 290, 55);
     ctx.strokeStyle = '#6e7681';
-    ctx.lineWidth = 3;
-    ctx.strokeRect(canvas.width / 2 - 118, bedY - 4, 236, 42);
-
-    ctx.fillStyle = 'rgba(88, 166, 255, 0.15)';
-    ctx.fillRect(canvas.width / 2 - 72, bedY + 2, 144, 28);
+    ctx.lineWidth = 4;
+    ctx.strokeRect(-145, -48, 290, 55);
+    ctx.fillStyle = '#484f58';
+    ctx.fillRect(-50, -95, 100, 45);
+    ctx.restore();
   }
 
   function drawCrosshair(x, y) {
+    var depth = 1 + Math.sin(animTime * 4) * 0.05;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(depth, depth);
     ctx.strokeStyle = '#e3b341';
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.arc(x, y, 14, 0, Math.PI * 2);
+    ctx.arc(0, 0, 16, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(227, 179, 65, 0.35)';
+    ctx.beginPath();
+    ctx.arc(0, 0, 24, 0, Math.PI * 2);
     ctx.stroke();
     ctx.beginPath();
-    ctx.moveTo(x - 20, y);
-    ctx.lineTo(x - 8, y);
-    ctx.moveTo(x + 8, y);
-    ctx.lineTo(x + 20, y);
-    ctx.moveTo(x, y - 20);
-    ctx.lineTo(x, y - 8);
-    ctx.moveTo(x, y + 8);
-    ctx.lineTo(x, y + 20);
+    ctx.moveTo(-22, 0);
+    ctx.lineTo(-8, 0);
+    ctx.moveTo(8, 0);
+    ctx.lineTo(22, 0);
+    ctx.moveTo(0, -22);
+    ctx.lineTo(0, -8);
+    ctx.moveTo(0, 8);
+    ctx.lineTo(0, 22);
     ctx.stroke();
-    ctx.fillStyle = 'rgba(227, 179, 65, 0.35)';
+    ctx.fillStyle = 'rgba(255, 80, 60, 0.5)';
     ctx.beginPath();
-    ctx.arc(x, y, 3, 0, Math.PI * 2);
+    ctx.arc(0, 0, 3, 0, Math.PI * 2);
     ctx.fill();
+    ctx.restore();
+  }
+
+  /** @deprecated use drawDroneDriveScene */
+  function drawDroneChaseScene() {
+    drawDroneDriveScene();
   }
 
   function drawBackground() {
-    if (isDroneChase()) {
-      drawDroneChaseScene();
+    if (isDroneDrive()) {
+      drawDroneDriveScene();
       return;
     }
 
-    if (currentMode === 'sidescroll') {
-      ctx.fillStyle = '#141c28';
+    if (isJetSide()) {
+      ctx.fillStyle = '#0a0e18';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      ctx.fillStyle = '#1f2937';
-      ctx.fillRect(0, GROUND_Y + 12, canvas.width, canvas.height - GROUND_Y);
-
-      ctx.strokeStyle = '#30363d';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(0, GROUND_Y + 12);
-      ctx.lineTo(canvas.width, GROUND_Y + 12);
-      ctx.stroke();
-
-      for (var i = 0; i < 8; i++) {
-        ctx.fillStyle = 'rgba(48, 54, 61, 0.5)';
-        ctx.fillRect(i * 140 + 20, GROUND_Y - 40 - (i % 3) * 30, 60, 40 + (i % 3) * 30);
+      for (var lane = 0; lane < JET_LANES.length; lane++) {
+        ctx.strokeStyle = 'rgba(88, 166, 255, 0.12)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(0, JET_LANES[lane]);
+        ctx.lineTo(canvas.width, JET_LANES[lane]);
+        ctx.stroke();
+      }
+      ctx.fillStyle = 'rgba(88, 166, 255, 0.04)';
+      for (var star = 0; star < 40; star++) {
+        ctx.fillRect((star * 97 + animTime * 20) % canvas.width, (star * 53) % canvas.height, 2, 2);
       }
       return;
     }
@@ -1378,8 +1650,8 @@
         continue;
       }
 
-      var faceX = currentMode === 'sidescroll' ? -1 : player.x - e.x;
-      var faceY = currentMode === 'sidescroll' ? 0 : player.y - e.y;
+      var faceX = isJetSide() ? -1 : player.x - e.x;
+      var faceY = isJetSide() ? 0 : player.y - e.y;
       var legSwing = e.isZombie ? Math.sin(e.shamble) * 4 : 0;
 
       drawStickmanUpright(
@@ -1390,30 +1662,48 @@
         e.color || '#f85149',
         e.scale || 1,
         {
-          armed: currentMode === 'shooters' || isXLMode(),
-          zombieArms: e.isZombie,
-          legSwing: legSwing
+          armed: currentMode === 'shooters',
+          zombieArms: e.isZombie && !e.isBrute,
+          legSwing: legSwing,
+          brute: e.isBrute
         }
       );
     }
 
-    if (state === STATE.PLAYING && !isDroneChase()) {
+    for (var ob = 0; ob < obstacles.length; ob++) {
+      var o = obstacles[ob];
+      ctx.fillStyle = '#6e7681';
+      ctx.beginPath();
+      ctx.arc(o.x, o.y, o.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#8b949e';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    if (state === STATE.PLAYING && !isDroneDrive()) {
       if (player.invuln <= 0 || Math.floor(Date.now() / 100) % 2 === 0) {
-        var pFaceX = currentMode === 'sidescroll' ? player.facing : player.aimX;
-        var pFaceY = currentMode === 'sidescroll' ? 0 : player.aimY;
-        drawStickmanUpright(player.x, player.y, pFaceX, pFaceY, '#58a6ff', 1.1, { armed: true });
+        if (isJetSide()) {
+          drawJetPlayer(player);
+        } else if (window.CharacterModels && isTopDown()) {
+          CharacterModels.draw(ctx, characterModel, player.x, player.y, player.aimX, player.aimY, { armed: true });
+        } else {
+          var pFaceX = player.aimX;
+          var pFaceY = player.aimY;
+          drawStickmanUpright(player.x, player.y, pFaceX, pFaceY, '#58a6ff', 1.1, { armed: true });
+        }
       }
     }
 
-    if (state === STATE.PLAYING && isDroneChase()) {
+    if (state === STATE.PLAYING && isDroneDrive()) {
       drawCrosshair(player.x, player.y);
     }
 
-    ctx.fillStyle = isDroneChase() ? '#79c0ff' : '#e3b341';
+    ctx.fillStyle = isDroneDrive() ? '#79c0ff' : '#e3b341';
     for (var k = 0; k < bullets.length; k++) {
       var b = bullets[k];
       ctx.beginPath();
-      ctx.arc(b.x, b.y, isDroneChase() ? 4 : 3, 0, Math.PI * 2);
+      ctx.arc(b.x, b.y, isDroneDrive() ? 4 : 3, 0, Math.PI * 2);
       ctx.fill();
     }
 
@@ -1439,10 +1729,10 @@
       }
     }
 
-    if (isDroneChase() && state === STATE.PLAYING) {
+    if (isDroneDrive() && state === STATE.PLAYING) {
       ctx.fillStyle = 'rgba(139, 148, 158, 0.9)';
       ctx.font = '600 12px Segoe UI, system-ui, sans-serif';
-      ctx.fillText('Hold aim steady — the road throws you around', 16, 24);
+      ctx.fillText('Drone Drive — aim from the truck bed', 16, 24);
     }
 
     ctx.restore();
@@ -1481,12 +1771,32 @@
     GameAudio.resume().then(startGame);
   });
 
-  modesBtn.addEventListener('click', function () {
-    showModeSelect();
+  autoshootBtn.addEventListener('click', toggleAutoshoot);
+  hudAutoshoot.addEventListener('click', toggleAutoshoot);
+  exitBtn.addEventListener('click', exitToMenu);
+
+  canvas.addEventListener('mousemove', function (e) {
+    var pt = canvasPoint(e);
+    mouse.x = pt.x;
+    mouse.y = pt.y;
+    mouse.active = true;
+  });
+
+  canvas.addEventListener('mouseleave', function () {
+    mouse.active = false;
+  });
+
+  canvas.addEventListener('mousedown', function () {
+    mouse.down = true;
+  });
+
+  window.addEventListener('mouseup', function () {
+    mouse.down = false;
   });
 
   overlay.addEventListener('click', function (e) {
-    if (e.target.closest('.mode-card') || e.target === modesBtn || e.target === startBtn) return;
+    if (e.target.closest('.mode-card') || e.target.closest('.char-card') ||
+        e.target === startBtn || e.target === autoshootBtn) return;
     if (state === STATE.MODES && !startBtn.hidden) {
       GameAudio.resume().then(startGame);
     }
