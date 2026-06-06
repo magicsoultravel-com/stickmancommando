@@ -18,7 +18,8 @@ After the intro sting, pick a demo from the grid:
 
 | Mode | What to try |
 |------|-------------|
-| **Zombie** | Slow walker horde — spams from all edges, shambling swarm |
+| **Zombie** | Walker horde on grid lanes — kills spray gore (heads, limbs) |
+| **Animated XL** | 1280×720 scrollable map — hills, rivers, bridges, trees, lean animated stickmen, enemy fire |
 | **Drone chase** | Truck bed turret — aim crosshair on a bumpy road, shoot stick-drones |
 | **Side-scroll** | Run, jump, shoot — enemies march from the right |
 | **Enemy fire** | Red stickmen shoot back — dodge their bullets |

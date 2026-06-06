@@ -18,6 +18,7 @@
   var highScoreEl = document.getElementById('high-score');
 
   var GROUND_Y = canvas.height - 80;
+  var ZOMBIE_GRID = 48;
   var HIGH_SCORE_PREFIX = 'stickmanCommandoHighScore_';
   var STATE = { INTRO: 'intro', MODES: 'modes', PLAYING: 'playing', GAMEOVER: 'gameover' };
 
@@ -27,6 +28,12 @@
       name: 'Zombie',
       desc: 'The dead keep coming. Slow walkers, endless horde — hold your ground.',
       hint: '↑ ↓ ← → move · SPACE shoot · survive the swarm'
+    },
+    {
+      id: 'animatedxl',
+      name: 'Animated XL',
+      desc: 'Big scrollable wilds — hills, rivers, bridges, trees. Lean stickmen, enemy fire, walk cycles.',
+      hint: '↑ ↓ ← → explore · SPACE shoot · dodge red bullets · use bridges over rivers'
     },
     {
       id: 'dronechase',
@@ -96,13 +103,16 @@
   var difficultyTimer = 0;
   var shakeTimer = 0;
 
-  var player = createPlayer();
+  var player = null;
   var bullets = [];
   var enemyBullets = [];
   var enemies = [];
   var particles = [];
   var pickups = [];
   var truck = null;
+  var camera = { x: 0, y: 0 };
+  var animTime = 0;
+  var gameWrapper = document.getElementById('game-wrapper');
 
   var score = 0;
   var highScore = 0;
@@ -112,12 +122,17 @@
   var wave = { number: 0, toSpawn: 0, phase: 'break', breakTimer: 0, bannerTimer: 0 };
 
   buildModePicker();
+  setCanvasForMode();
   loadHighScoreForMode(currentMode);
 
   function isTopDown() {
     return currentMode === 'zombie' || currentMode === 'shooters' ||
       currentMode === 'waves' || currentMode === 'medkits' ||
       currentMode === 'variants' || currentMode === 'leaderboard';
+  }
+
+  function isXLMode() {
+    return currentMode === 'animatedxl';
   }
 
   function isDroneChase() {
@@ -139,8 +154,30 @@
     });
   }
 
+  function snapGrid(val) {
+    return Math.round(val / ZOMBIE_GRID) * ZOMBIE_GRID;
+  }
+
+  function setCanvasForMode() {
+    if (isXLMode()) {
+      canvas.width = XLMode.CANVAS_W;
+      canvas.height = XLMode.CANVAS_H;
+      gameWrapper.classList.add('xl-mode');
+    } else {
+      canvas.width = 960;
+      canvas.height = 540;
+      gameWrapper.classList.remove('xl-mode');
+    }
+    GROUND_Y = canvas.height - 80;
+    if (truck) {
+      truck.bedCX = canvas.width / 2;
+      truck.bedCY = canvas.height - 98;
+    }
+  }
+
   function selectMode(modeId) {
     currentMode = modeId;
+    setCanvasForMode();
     loadHighScoreForMode(modeId);
     overlayHint.textContent = getMode().hint;
     overlaySubtitle.textContent = getMode().desc;
@@ -183,6 +220,24 @@
   }
 
   function createPlayer() {
+    if (isXLMode()) {
+      return {
+        x: XLMode.worldPixelW / 2,
+        y: XLMode.worldPixelH / 2,
+        vx: 0,
+        vy: 0,
+        speed: 240,
+        radius: 14,
+        health: 100,
+        maxHealth: 100,
+        aimX: 1,
+        aimY: 0,
+        shootCooldown: 0,
+        invuln: 0,
+        animPhase: 0
+      };
+    }
+
     if (isDroneChase()) {
       return {
         offsetX: 0,
@@ -221,6 +276,8 @@
   }
 
   function resetGame() {
+    setCanvasForMode();
+    Gore.clear();
     player = createPlayer();
     bullets = [];
     enemyBullets = [];
@@ -228,11 +285,17 @@
     particles = [];
     pickups = [];
     truck = isDroneChase() ? createTruck() : null;
+    camera = { x: 0, y: 0 };
+    animTime = 0;
     score = 0;
     spawnTimer = 0;
     difficultyTimer = 0;
 
-    if (currentMode === 'zombie') {
+    if (isXLMode()) {
+      XLMode.generateWorld(Date.now());
+      spawnInterval = 2;
+      maxEnemies = 18;
+    } else if (currentMode === 'zombie') {
       spawnInterval = 0.35;
       maxEnemies = 50;
     } else if (currentMode === 'dronechase') {
@@ -305,6 +368,12 @@
 
   function showModeSelect() {
     state = STATE.MODES;
+    Gore.clear();
+    bullets = [];
+    enemyBullets = [];
+    enemies = [];
+    particles = [];
+    pickups = [];
     selectMode(currentMode);
     showOverlay('Pick a demo', getMode().desc, {
       showPicker: true, showDeploy: true, showModes: false, deployLabel: 'Deploy'
@@ -381,7 +450,8 @@
       isDrone: !!type.isDrone,
       isZombie: !!type.zombie,
       weave: Math.random() * Math.PI * 2,
-      z: extra.z || 0
+      z: extra.z || 0,
+      animPhase: Math.random() * 10
     });
   }
 
@@ -397,6 +467,10 @@
     else { x = -margin; y = Math.random() * canvas.height; }
 
     if (currentMode === 'zombie' || currentMode === 'leaderboard') {
+      if (edge === 0 || edge === 2) x = snapGrid(x);
+      else y = snapGrid(y);
+      y = Math.max(ZOMBIE_GRID, Math.min(canvas.height - ZOMBIE_GRID, y));
+      x = Math.max(ZOMBIE_GRID, Math.min(canvas.width - ZOMBIE_GRID, x));
       spawnEnemyAt(x, y, 'walker');
       return;
     }
@@ -413,6 +487,19 @@
   function spawnWalkerBurst() {
     var n = 2 + Math.floor(Math.random() * 2);
     for (var i = 0; i < n; i++) spawnTopDownEnemy();
+  }
+
+  function spawnXLEnemy() {
+    for (var attempt = 0; attempt < 8; attempt++) {
+      var angle = Math.random() * Math.PI * 2;
+      var dist = 380 + Math.random() * 420;
+      var ex = player.x + Math.cos(angle) * dist;
+      var ey = player.y + Math.sin(angle) * dist;
+      if (XLMode.isWalkable(ex, ey)) {
+        spawnEnemyAt(ex, ey, 'grunt');
+        return;
+      }
+    }
   }
 
   function spawnSideEnemy() {
@@ -507,16 +594,36 @@
     if (player.health <= 0) endGame();
   }
 
-  function killEnemy(index) {
+  function killEnemy(index, hitAngle) {
     var e = enemies[index];
     score += e.points || 10;
     spawnParticles(e.x, e.y, e.color || '#f85149', e.isDrone ? 12 : 8);
+
+    if (e.isZombie && window.Gore) {
+      Gore.spawnExplosion(e.x, e.y, e.color || '#7d9a6a', hitAngle);
+    }
+
     maybeDropMedkit(e.x, e.y);
     enemies.splice(index, 1);
     updateHud();
   }
 
   function handleSpawning(dt) {
+    if (isXLMode()) {
+      spawnTimer += dt;
+      if (spawnTimer >= spawnInterval && enemies.length < maxEnemies) {
+        spawnTimer = 0;
+        spawnXLEnemy();
+      }
+      difficultyTimer += dt;
+      if (difficultyTimer > 12) {
+        difficultyTimer = 0;
+        spawnInterval = Math.max(0.9, spawnInterval - 0.12);
+        maxEnemies = Math.min(28, maxEnemies + 1);
+      }
+      return;
+    }
+
     if (isDroneChase()) {
       spawnTimer += dt;
       if (spawnTimer >= spawnInterval && enemies.length < maxEnemies) {
@@ -625,7 +732,44 @@
     player.aimY = -1;
   }
 
+  function updateXLMovement(dt) {
+    player.vx = 0;
+    player.vy = 0;
+    if (keys['ArrowLeft']) player.vx -= 1;
+    if (keys['ArrowRight']) player.vx += 1;
+    if (keys['ArrowUp']) player.vy -= 1;
+    if (keys['ArrowDown']) player.vy += 1;
+
+    if (player.vx !== 0 || player.vy !== 0) {
+      var moveLen = Math.hypot(player.vx, player.vy);
+      player.aimX = player.vx / moveLen;
+      player.aimY = player.vy / moveLen;
+      player.animPhase += dt * (1 + moveLen);
+    }
+
+    var mult = XLMode.moveSpeedMult(player.x, player.y);
+    var spd = player.speed * mult * dt;
+    var nx = player.x + player.vx * spd;
+    var ny = player.y + player.vy * spd;
+
+    if (XLMode.isWalkable(nx, player.y)) player.x = nx;
+    if (XLMode.isWalkable(player.x, ny)) player.y = ny;
+
+    player.x = Math.max(24, Math.min(XLMode.worldPixelW - 24, player.x));
+    player.y = Math.max(24, Math.min(XLMode.worldPixelH - 24, player.y));
+
+    camera.x = player.x - canvas.width / 2;
+    camera.y = player.y - canvas.height / 2;
+    camera.x = Math.max(0, Math.min(XLMode.worldPixelW - canvas.width, camera.x));
+    camera.y = Math.max(0, Math.min(XLMode.worldPixelH - canvas.height, camera.y));
+  }
+
   function updateMovement(dt) {
+    if (isXLMode()) {
+      updateXLMovement(dt);
+      return;
+    }
+
     if (isDroneChase()) {
       updateDroneChase(dt);
       return;
@@ -679,6 +823,7 @@
   function update(dt) {
     if (state !== STATE.PLAYING) return;
 
+    animTime += dt;
     handleSpawning(dt);
     updateMovement(dt);
 
@@ -687,6 +832,10 @@
     if (player.shootCooldown > 0) player.shootCooldown -= dt;
     if (player.invuln > 0) player.invuln -= dt;
     if (shakeTimer > 0) shakeTimer -= dt;
+    if (window.Gore) Gore.update(dt);
+
+    var worldW = isXLMode() ? XLMode.worldPixelW : canvas.width;
+    var worldH = isXLMode() ? XLMode.worldPixelH : canvas.height;
 
     for (var i = bullets.length - 1; i >= 0; i--) {
       var b = bullets[i];
@@ -694,7 +843,7 @@
       b.y += b.vy * dt;
       b.life -= dt;
 
-      var outOfBounds = b.life <= 0 || b.x < -20 || b.x > canvas.width + 20 || b.y < -20 || b.y > canvas.height + 20;
+      var outOfBounds = b.life <= 0 || b.x < -20 || b.x > worldW + 20 || b.y < -20 || b.y > worldH + 20;
       if (outOfBounds) {
         bullets.splice(i, 1);
         continue;
@@ -706,20 +855,20 @@
         if (dist(b.x, b.y, e.x, e.y) < hitRadius) {
           bullets.splice(i, 1);
           e.health -= 1;
-          if (e.health <= 0) killEnemy(j);
+          if (e.health <= 0) killEnemy(j, Math.atan2(b.vy, b.vx));
           else spawnParticles(e.x, e.y, e.color, 3);
           break;
         }
       }
     }
 
-    if (currentMode === 'shooters') {
+    if (currentMode === 'shooters' || isXLMode()) {
       for (var eb = enemyBullets.length - 1; eb >= 0; eb--) {
         var bullet = enemyBullets[eb];
         bullet.x += bullet.vx * dt;
         bullet.y += bullet.vy * dt;
         bullet.life -= dt;
-        if (bullet.life <= 0 || bullet.x < -20 || bullet.x > canvas.width + 20 || bullet.y < -20 || bullet.y > canvas.height + 20) {
+        if (bullet.life <= 0 || bullet.x < -20 || bullet.x > worldW + 20 || bullet.y < -20 || bullet.y > worldH + 20) {
           enemyBullets.splice(eb, 1);
           continue;
         }
@@ -733,7 +882,7 @@
     for (var k = enemies.length - 1; k >= 0; k--) {
       var enemy = enemies[k];
 
-      if (enemy.isDrone) {
+      if (enemy.isDrone && truck) {
         enemy.weave += dt * 3;
         enemy.z = Math.min(1, enemy.z + dt * 0.35);
         var targetX = player.x + Math.sin(enemy.weave) * 40;
@@ -769,11 +918,17 @@
         var elen = Math.hypot(ex, ey) || 1;
         enemy.x += (ex / elen) * enemy.speed * dt;
         enemy.y += (ey / elen) * enemy.speed * dt;
+        if (enemy.isZombie) {
+          enemy.y += (snapGrid(enemy.y) - enemy.y) * 2.8 * dt;
+        }
       }
 
       enemy.wobble += dt * 6;
+      if (enemy.animPhase !== undefined) {
+        enemy.animPhase += dt * (0.5 + enemy.speed / 80);
+      }
 
-      if (currentMode === 'shooters' && enemy.shootCooldown !== undefined) {
+      if ((currentMode === 'shooters' || isXLMode()) && enemy.shootCooldown !== undefined) {
         enemy.shootCooldown -= dt;
         var range = dist(enemy.x, enemy.y, player.x, player.y);
         if (enemy.shootCooldown <= 0 && range < 320 && range > 60) {
@@ -1037,18 +1192,21 @@
 
       ctx.strokeStyle = 'rgba(60, 80, 55, 0.35)';
       ctx.lineWidth = 1;
-      var grid = 48;
-      for (var gx = 0; gx <= canvas.width; gx += grid) {
+      for (var gx = 0; gx <= canvas.width; gx += ZOMBIE_GRID) {
         ctx.beginPath();
         ctx.moveTo(gx, 0);
         ctx.lineTo(gx, canvas.height);
         ctx.stroke();
       }
-      for (var gy = 0; gy <= canvas.height; gy += grid) {
+      for (var gy = 0; gy <= canvas.height; gy += ZOMBIE_GRID) {
         ctx.beginPath();
         ctx.moveTo(0, gy);
         ctx.lineTo(canvas.width, gy);
         ctx.stroke();
+        if (gy > 0 && gy < canvas.height) {
+          ctx.fillStyle = 'rgba(125, 154, 106, 0.04)';
+          ctx.fillRect(0, gy - 1, canvas.width, 2);
+        }
       }
 
       ctx.fillStyle = 'rgba(125, 154, 106, 0.06)';
@@ -1083,7 +1241,100 @@
     ctx.fill();
   }
 
+  function renderXL() {
+    ctx.save();
+
+    if (shakeTimer > 0) {
+      var shake = shakeTimer * 12;
+      ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
+    }
+
+    var sky = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    sky.addColorStop(0, '#1a2840');
+    sky.addColorStop(1, '#2d4a32');
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    if (!XLMode.hasWorld()) {
+      ctx.fillStyle = 'rgba(139, 148, 158, 0.9)';
+      ctx.font = '600 14px Segoe UI, system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Press Deploy to generate the map', canvas.width / 2, canvas.height / 2);
+      ctx.textAlign = 'left';
+      ctx.restore();
+      return;
+    }
+
+    XLMode.drawWorld(ctx, camera.x, camera.y, canvas.width, canvas.height, animTime);
+
+    ctx.save();
+    ctx.translate(-camera.x, -camera.y);
+
+    for (var i = 0; i < particles.length; i++) {
+      var p = particles[i];
+      ctx.globalAlpha = p.life * 3;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    for (var j = 0; j < enemies.length; j++) {
+      var e = enemies[j];
+      XLMode.drawStickmanLean(ctx, e.x, e.y, player.x - e.x, player.y - e.y, e.color, {
+        armed: true,
+        animPhase: e.animPhase || 0
+      });
+    }
+
+    if (state === STATE.PLAYING && (player.invuln <= 0 || Math.floor(Date.now() / 100) % 2 === 0)) {
+      XLMode.drawStickmanLean(ctx, player.x, player.y, player.aimX, player.aimY, '#58a6ff', {
+        armed: true,
+        animPhase: player.animPhase || 0,
+        scale: 1.2
+      });
+    }
+
+    ctx.fillStyle = '#e3b341';
+    for (var k = 0; k < bullets.length; k++) {
+      var b = bullets[k];
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.fillStyle = '#ff7b72';
+    for (var eb = 0; eb < enemyBullets.length; eb++) {
+      var ebItem = enemyBullets[eb];
+      ctx.beginPath();
+      ctx.arc(ebItem.x, ebItem.y, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    if (window.Gore) Gore.render(ctx);
+
+    ctx.restore();
+
+    ctx.fillStyle = 'rgba(230, 237, 243, 0.75)';
+    ctx.font = '600 12px Segoe UI, system-ui, sans-serif';
+    ctx.fillText('Animated XL — explore the wilds', 16, 24);
+
+    ctx.restore();
+  }
+
   function render() {
+    if (isXLMode()) {
+      renderXL();
+      return;
+    }
+
+    if (state !== STATE.PLAYING && state !== STATE.GAMEOVER) {
+      ctx.fillStyle = '#1a2332';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      return;
+    }
+
     ctx.save();
 
     if (shakeTimer > 0) {
@@ -1139,7 +1390,7 @@
         e.color || '#f85149',
         e.scale || 1,
         {
-          armed: currentMode === 'shooters',
+          armed: currentMode === 'shooters' || isXLMode(),
           zombieArms: e.isZombie,
           legSwing: legSwing
         }
@@ -1174,6 +1425,10 @@
       ctx.fill();
     }
 
+    if (window.Gore && (currentMode === 'zombie' || currentMode === 'leaderboard')) {
+      Gore.render(ctx);
+    }
+
     if (currentMode === 'waves' && state === STATE.PLAYING) {
       ctx.fillStyle = 'rgba(230, 237, 243, 0.85)';
       ctx.font = '600 14px Segoe UI, system-ui, sans-serif';
@@ -1196,8 +1451,14 @@
   function loop(timestamp) {
     var dt = Math.min((timestamp - lastTime) / 1000, 0.05);
     lastTime = timestamp;
-    update(dt);
-    render();
+    try {
+      if (state === STATE.PLAYING) {
+        update(dt);
+      }
+      render();
+    } catch (err) {
+      console.error('Game loop error:', err);
+    }
     requestAnimationFrame(loop);
   }
 
@@ -1227,6 +1488,9 @@
   overlay.addEventListener('click', function (e) {
     if (e.target.closest('.mode-card') || e.target === modesBtn || e.target === startBtn) return;
     if (state === STATE.MODES && !startBtn.hidden) {
+      GameAudio.resume().then(startGame);
+    }
+    if (state === STATE.GAMEOVER && !startBtn.hidden) {
       GameAudio.resume().then(startGame);
     }
   });

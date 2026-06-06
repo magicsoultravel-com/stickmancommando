@@ -23,6 +23,10 @@ body {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
 }
 
+#game-wrapper.xl-mode {
+  width: min(1280px, 100vw);
+}
+
 #hud {
   display: flex;
   align-items: center;
