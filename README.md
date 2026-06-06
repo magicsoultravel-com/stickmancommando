@@ -18,7 +18,8 @@ After the intro sting, pick a demo from the grid:
 
 | Mode | What to try |
 |------|-------------|
-| **Arena** | Original top-down endless survival |
+| **Zombie** | Slow walker horde — spams from all edges, shambling swarm |
+| **Drone chase** | Truck bed turret — aim crosshair on a bumpy road, shoot stick-drones |
 | **Side-scroll** | Run, jump, shoot — enemies march from the right |
 | **Enemy fire** | Red stickmen shoot back — dodge their bullets |
 | **Waves** | Clear a wave, breather, next wave |
