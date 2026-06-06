@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stickman Commando</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="game-wrapper">
+    <header id="hud">
+      <div class="hud-block">
+        <span class="hud-label">HP</span>
+        <div class="health-bar">
+          <div id="health-fill"></div>
+        </div>
+        <span id="health-text">100</span>
+      </div>
+      <div class="hud-block hud-center">
+        <h1>Stickman Commando</h1>
+      </div>
+      <div class="hud-block hud-right">
+        <span class="hud-label">Score</span>
+        <span id="score">0</span>
+        <span class="hud-divider">|</span>
+        <span class="hud-label">Best</span>
+        <span id="high-score">0</span>
+      </div>
+    </header>
+
+    <canvas id="game" width="960" height="540"></canvas>
+
+    <div id="overlay">
+      <div id="overlay-content">
+        <h2 id="overlay-title">Stickman Commando</h2>
+        <p id="overlay-subtitle"></p>
+        <p id="overlay-hint">↑ ↓ ← → move &nbsp;·&nbsp; SPACE shoot</p>
+        <button id="start-btn" type="button" hidden>Deploy</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/audio.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>
