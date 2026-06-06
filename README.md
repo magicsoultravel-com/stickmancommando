@@ -12,12 +12,21 @@ Play locally by opening `index.html`, or deploy to [GitHub Pages](https://pages.
 | Space | Shoot |
 | Space / Click | Start / redeploy |
 
-## Features (v0.1)
+## Demo modes
 
-- Health, score, and per-browser high score (`localStorage`)
-- Enemies spawn from the edges and chase you
-- Difficulty ramps up over time
-- Intro sting on load (synthesized — no audio files)
+After the intro sting, pick a demo from the grid:
+
+| Mode | What to try |
+|------|-------------|
+| **Arena** | Original top-down endless survival |
+| **Side-scroll** | Run, jump, shoot — enemies march from the right |
+| **Enemy fire** | Red stickmen shoot back — dodge their bullets |
+| **Waves** | Clear a wave, breather, next wave |
+| **Medkits** | Green crosses drop on kills — walk over to heal |
+| **Enemy types** | Orange runners, red grunts, purple tanks |
+| **Leaderboard demo** | Mock global scoreboard on game over (not live) |
+
+Each mode saves its own high score in your browser.
 
 ## GitHub Pages setup
 

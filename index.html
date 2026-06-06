@@ -18,6 +18,7 @@
       </div>
       <div class="hud-block hud-center">
         <h1>Stickman Commando</h1>
+        <span id="mode-badge" hidden></span>
       </div>
       <div class="hud-block hud-right">
         <span class="hud-label">Score</span>
@@ -29,13 +30,18 @@
     </header>
 
     <canvas id="game" width="960" height="540"></canvas>
+    <div id="wave-banner" class="wave-banner"></div>
 
     <div id="overlay">
       <div id="overlay-content">
         <h2 id="overlay-title">Stickman Commando</h2>
         <p id="overlay-subtitle"></p>
         <p id="overlay-hint">↑ ↓ ← → move &nbsp;·&nbsp; SPACE shoot</p>
-        <button id="start-btn" type="button" hidden>Deploy</button>
+        <div id="mode-picker" hidden></div>
+        <div id="overlay-actions">
+          <button id="start-btn" type="button" hidden>Deploy</button>
+          <button id="modes-btn" type="button" hidden>Other modes</button>
+        </div>
       </div>
     </div>
   </div>
