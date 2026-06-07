@@ -122,7 +122,8 @@
     modeId: currentModeId,
     getWorldMouse: getWorldMouse,
     hurtPlayer: hurtPlayer,
-    updateHud: updateHud
+    updateHud: updateHud,
+    endGame: function () { endGame(); }
   };
 
   function syncGRefs() {
@@ -579,6 +580,8 @@
     if (mode.onKill) mode.onKill(g, e, hitAngle);
     score = g.score;
     enemies.splice(index, 1);
+    if (mode.afterKill) mode.afterKill(g);
+    score = g.score;
     updateHud();
   }
 
@@ -624,6 +627,11 @@
         continue;
       }
 
+      if (mode.interceptBullet && mode.interceptBullet(g, b)) {
+        bullets.splice(i, 1);
+        continue;
+      }
+
       for (var j = enemies.length - 1; j >= 0; j--) {
         var e = enemies[j];
         var hitRadius = e.radius + (e.isDrone ? 6 : 4);
@@ -644,6 +652,10 @@
         bullet.y += bullet.vy * dt;
         bullet.life -= dt;
         if (bullet.life <= 0 || bullet.x < -20 || bullet.x > bounds.w + 20 || bullet.y < -20 || bullet.y > bounds.h + 20) {
+          enemyBullets.splice(eb, 1);
+          continue;
+        }
+        if (mode.interceptEnemyBullet && mode.interceptEnemyBullet(g, bullet)) {
           enemyBullets.splice(eb, 1);
           continue;
         }
@@ -670,7 +682,7 @@
         enemy.animPhase += dt * (0.5 + enemy.speed / 80);
       }
 
-      if (flag('enemyShoots') && enemy.shootCooldown !== undefined) {
+      if (flag('enemyShoots') && !flag('invaders') && enemy.shootCooldown !== undefined) {
         enemy.shootCooldown -= dt;
         var range = S.dist(enemy.x, enemy.y, player.x, player.y);
         if (enemy.shootCooldown <= 0 && range < 320 && range > 60) {

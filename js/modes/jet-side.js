@@ -89,6 +89,7 @@
       g.obstacles = [];
       g.jetKills = 0;
       g.jetTier = 0;
+      g.jetLaneLatch = { up: false, down: false };
     },
 
     createPlayer: function (g) {
@@ -135,17 +136,31 @@
     },
 
     move: function (g, dt) {
-      if (g.keys['ArrowUp']) g.player.targetLane = Math.max(0, g.player.targetLane - 1);
-      if (g.keys['ArrowDown']) g.player.targetLane = Math.min(2, g.player.targetLane + 1);
+      if (!g.jetLaneLatch) g.jetLaneLatch = { up: false, down: false };
+
+      var up = !!g.keys['ArrowUp'];
+      var down = !!g.keys['ArrowDown'];
+      if (up && !g.jetLaneLatch.up) {
+        g.player.targetLane = Math.max(0, g.player.targetLane - 1);
+      }
+      if (down && !g.jetLaneLatch.down) {
+        g.player.targetLane = Math.min(2, g.player.targetLane + 1);
+      }
+      g.jetLaneLatch.up = up;
+      g.jetLaneLatch.down = down;
+
       var targetY = JET_LANES[g.player.targetLane];
-      g.player.y += (targetY - g.player.y) * 8 * dt;
+      g.player.y += (targetY - g.player.y) * 10 * dt;
+      if (Math.abs(g.player.y - targetY) < 1) g.player.y = targetY;
+
       if (g.keys['ArrowRight']) g.player.x += g.player.speed * dt;
       if (g.keys['ArrowLeft']) g.player.x -= g.player.speed * 0.5 * dt;
       g.player.thrust = g.keys['ArrowRight'] ? 1 : 0;
       g.player.x = Math.max(60, Math.min(g.canvas.width - 40, g.player.x));
       g.player.aimX = 1;
       g.player.aimY = 0;
-      if (g.mouse.active) {
+
+      if (g.mouse.active && g.mouse.down) {
         var bestLane = 0;
         var bestDist = Infinity;
         for (var li = 0; li < JET_LANES.length; li++) {
