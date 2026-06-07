@@ -166,8 +166,134 @@
     ctx.restore();
   }
 
+  function drawAnimated(ctx, modelId, x, y, options) {
+    options = options || {};
+    var pose = options.pose || 'idle';
+    var phase = options.phase || 0;
+    var facing = options.facing != null ? options.facing : 1;
+    var color = options.color || '#58a6ff';
+    var armed = options.armed !== false;
+    var aimAngle = options.aimAngle != null ? options.aimAngle : (facing > 0 ? 0 : Math.PI);
+    var scale = options.scale || 1.1;
+
+    var walkSin = Math.sin(phase * 9);
+    var walkCos = Math.cos(phase * 9);
+    var breathe = Math.sin(phase * 2.2) * 1.2;
+    var legSwing = 0;
+    var armSwing = 0;
+    var bodyBob = 0;
+    var climbOffset = 0;
+    var backArm = 0;
+    var frontArm = 0;
+
+    if (pose === 'walk') {
+      legSwing = walkSin * 7;
+      armSwing = walkSin * 5;
+      bodyBob = Math.abs(walkCos) * 2;
+    } else if (pose === 'climb') {
+      climbOffset = Math.sin(phase * 11) * 2;
+      legSwing = Math.sin(phase * 11) * 4;
+      armSwing = Math.sin(phase * 11 + Math.PI) * 9;
+      bodyBob = Math.sin(phase * 11 * 2) * 1.5;
+    } else if (pose === 'aim') {
+      bodyBob = breathe * 0.4;
+    } else {
+      bodyBob = breathe;
+      armSwing = Math.sin(phase * 1.8) * 1.5;
+    }
+
+    ctx.save();
+    ctx.translate(x, y - bodyBob);
+    ctx.scale(facing * scale, scale);
+
+    var hipY = 0;
+    var shoulderY = -12;
+    var headY = -22;
+
+    ctx.strokeStyle = color;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = 2.5;
+
+    ctx.beginPath();
+    ctx.moveTo(-4 + legSwing * 0.15, hipY);
+    ctx.lineTo(-5 + legSwing, 20);
+    ctx.moveTo(4 - legSwing * 0.15, hipY);
+    ctx.lineTo(5 - legSwing, 20);
+    ctx.stroke();
+
+    ctx.lineWidth = 2.8;
+    ctx.beginPath();
+    ctx.moveTo(0, hipY);
+    ctx.lineTo(0, shoulderY);
+    ctx.stroke();
+
+    if (pose === 'climb') {
+      ctx.lineWidth = 2.4;
+      ctx.beginPath();
+      ctx.moveTo(0, shoulderY + climbOffset);
+      ctx.lineTo(-8 + armSwing * 0.3, shoulderY - 10 + climbOffset);
+      ctx.moveTo(0, shoulderY + climbOffset);
+      ctx.lineTo(8 - armSwing * 0.3, shoulderY - 10 + climbOffset);
+      ctx.stroke();
+    } else if (armed && (pose === 'aim' || pose === 'walk' || pose === 'idle')) {
+      var gx = Math.cos(aimAngle) * 14;
+      var gy = Math.sin(aimAngle) * 14;
+      ctx.beginPath();
+      ctx.moveTo(0, shoulderY);
+      ctx.lineTo(-6 - armSwing * 0.35, shoulderY + 4);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(0, shoulderY);
+      ctx.lineTo(gx, shoulderY + gy);
+      ctx.stroke();
+      ctx.fillStyle = color;
+      ctx.fillRect(gx - 2, shoulderY + gy - 2, 9, 3);
+    } else {
+      ctx.beginPath();
+      ctx.moveTo(0, shoulderY);
+      ctx.lineTo(-7 - armSwing, shoulderY + 5);
+      ctx.moveTo(0, shoulderY);
+      ctx.lineTo(7 + armSwing, shoulderY + 5);
+      ctx.stroke();
+    }
+
+    ctx.lineWidth = 2.5;
+    if (modelId === 'ninja') {
+      ctx.beginPath();
+      ctx.arc(0, headY, 5, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.strokeStyle = '#d73a49';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(-7, headY - 2);
+      ctx.lineTo(7, headY - 2);
+      ctx.stroke();
+    } else if (modelId === 'sage') {
+      ctx.fillStyle = '#c9a227';
+      ctx.beginPath();
+      ctx.moveTo(0, headY - 12);
+      ctx.lineTo(-12, headY);
+      ctx.lineTo(12, headY);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = color;
+      ctx.beginPath();
+      ctx.arc(0, headY + 2, 4.5, 0, Math.PI * 2);
+      ctx.stroke();
+    } else {
+      ctx.strokeStyle = color;
+      ctx.beginPath();
+      ctx.arc(0, headY, 5, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+
   window.CharacterModels = {
     list: MODELS,
-    draw: draw
+    draw: draw,
+    drawAnimated: drawAnimated
   };
 })();

@@ -687,7 +687,8 @@
       if (flag('enemyShoots') && !flag('invaders') && enemy.shootCooldown !== undefined) {
         enemy.shootCooldown -= dt;
         var range = S.dist(enemy.x, enemy.y, player.x, player.y);
-        if (enemy.shootCooldown <= 0 && range < 320 && range > 60) {
+        var sameFloor = flag('platform') ? Math.abs(enemy.y - player.y) < 120 : true;
+        if (enemy.shootCooldown <= 0 && range < 320 && range > 40 && sameFloor) {
           enemyShoot(enemy);
           enemy.shootCooldown = 1.4 + Math.random() * 0.8;
         }
@@ -732,6 +733,12 @@
     if (shakeTimer > 0) {
       var shake = shakeTimer * 12;
       ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
+    }
+
+    var worldCam = mode.getCamera ? mode.getCamera(g) : null;
+    if (worldCam) {
+      ctx.save();
+      ctx.translate(-worldCam.x, -worldCam.y);
     }
 
     if (mode.drawBackground) {
@@ -803,6 +810,10 @@
 
     if (window.Gore && flag('gore')) {
       Gore.render(ctx);
+    }
+
+    if (worldCam) {
+      ctx.restore();
     }
 
     if (mode.drawHud) mode.drawHud(g, ctx);
