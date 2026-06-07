@@ -8,7 +8,7 @@
   var CELL_Y = 44;
   var FORM_TOP = 72;
 
-  var ROW_TYPES = ['scout', 'scout', 'grunt', 'grunt', 'tank'];
+  var ROW_TYPES = ['runner', 'runner', 'grunt', 'grunt', 'tank'];
   var ROW_COLORS = ['#ffa657', '#ffa657', '#f85149', '#f85149', '#bc8cff'];
   var ROW_POINTS = [30, 30, 20, 20, 40];
 
@@ -71,7 +71,7 @@
           wobble: Math.random() * Math.PI * 2,
           type: typeKey,
           color: ROW_COLORS[row],
-          scale: typeKey === 'tank' ? 1.15 : typeKey === 'scout' ? 0.9 : 1,
+          scale: typeKey === 'tank' ? 1.15 : typeKey === 'runner' ? 0.9 : 1,
           points: ROW_POINTS[row],
           isInvader: true,
           shootCooldown: 0

@@ -311,21 +311,25 @@
         '<p class="mode-desc">' + entry.desc + '</p>';
 
       card.addEventListener('click', function (e) {
-        if (e.target.classList.contains('mode-chevron')) {
-          e.stopPropagation();
-          if (card.classList.contains('expanded')) {
-            card.classList.remove('expanded');
-            expandedModeId = null;
-          } else {
-            modePicker.querySelectorAll('.mode-card').forEach(function (c) {
-              c.classList.remove('expanded');
-            });
-            card.classList.add('expanded');
-            expandedModeId = entry.id;
-          }
-          return;
-        }
+        if (e.target.classList.contains('mode-chevron')) return;
         selectMode(entry.id);
+        GameAudio.resume();
+        GameAudio.playModeTune(entry.id);
+      });
+
+      card.querySelector('.mode-chevron').addEventListener('click', function (e) {
+        e.stopPropagation();
+        selectMode(entry.id);
+        if (card.classList.contains('expanded')) {
+          card.classList.remove('expanded');
+          expandedModeId = null;
+        } else {
+          modePicker.querySelectorAll('.mode-card').forEach(function (c) {
+            c.classList.remove('expanded');
+          });
+          card.classList.add('expanded');
+          expandedModeId = entry.id;
+        }
         GameAudio.resume();
         GameAudio.playModeTune(entry.id);
       });
@@ -486,6 +490,14 @@
       showPicker: true, showDeploy: true, deployLabel: 'Deploy'
     });
     GameAudio.playModeTune(currentModeId);
+  }
+
+  function launchGame() {
+    startGame();
+    try {
+      var p = GameAudio.resume();
+      if (p && typeof p.catch === 'function') p.catch(function () {});
+    } catch (err) { /* audio optional */ }
   }
 
   function startGame() {
@@ -858,7 +870,7 @@
     keys[e.key] = true;
 
     if (e.key === ' ' && state === STATE.MODES && !startBtn.hidden) {
-      startGame();
+      launchGame();
     }
   });
 
@@ -866,9 +878,7 @@
     keys[e.key] = false;
   });
 
-  startBtn.addEventListener('click', function () {
-    GameAudio.resume().then(startGame);
-  });
+  startBtn.addEventListener('click', launchGame);
 
   autoshootBtn.addEventListener('click', toggleAutoshoot);
   hudAutoshoot.addEventListener('click', toggleAutoshoot);
@@ -907,10 +917,10 @@
         e.target.closest('#model-modal') || e.target === modelBtn ||
         e.target === startBtn || e.target === autoshootBtn) return;
     if (state === STATE.MODES && !startBtn.hidden) {
-      GameAudio.resume().then(startGame);
+      launchGame();
     }
     if (state === STATE.GAMEOVER && !startBtn.hidden) {
-      GameAudio.resume().then(startGame);
+      launchGame();
     }
   });
 
