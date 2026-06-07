@@ -617,6 +617,12 @@
     if (mode.tick) mode.tick(g, dt);
     pullFromG();
 
+    if (flag('tetris')) {
+      score = g.score;
+      updateHud();
+      return;
+    }
+
     if (keys[' '] || keys['Space']) shoot();
     else if (autoShoot) shoot();
 
