@@ -4,58 +4,55 @@
 
   var JET_LANES = [130, 270, 410];
 
-  function drawJetBlast(ctx, nozzleY, flicker, strong) {
+  function drawJetBlast(ctx, nozzleX, nozzleY, flicker, strong, dir) {
+    dir = dir || -1;
     var len = strong ? flicker * 1.35 : flicker * 0.65;
-    var grad = ctx.createLinearGradient(-18, nozzleY, -18 - len, nozzleY);
+    var ex = nozzleX + dir * len;
+    var grad = ctx.createLinearGradient(nozzleX, nozzleY, ex, nozzleY);
     grad.addColorStop(0, strong ? '#fff4a3' : '#ffa657');
     grad.addColorStop(0.25, strong ? '#ff7b72' : '#ff9f43');
     grad.addColorStop(0.65, 'rgba(255, 100, 40, 0.45)');
     grad.addColorStop(1, 'rgba(255, 80, 20, 0)');
     ctx.fillStyle = grad;
     ctx.beginPath();
-    ctx.moveTo(-18, nozzleY - 3);
-    ctx.lineTo(-18 - len, nozzleY + 1);
-    ctx.lineTo(-18 - len * 0.55, nozzleY + 5);
-    ctx.lineTo(-18, nozzleY + 3);
+    ctx.moveTo(nozzleX, nozzleY - 3);
+    ctx.lineTo(ex, nozzleY + 1);
+    ctx.lineTo(nozzleX + dir * len * 0.55, nozzleY + 5);
+    ctx.lineTo(nozzleX, nozzleY + 3);
     ctx.closePath();
-    ctx.fill();
-
-    ctx.fillStyle = 'rgba(180, 190, 210, 0.12)';
-    ctx.beginPath();
-    ctx.arc(-18 - len * 0.35, nozzleY + 2, 4 + Math.random() * 3, 0, Math.PI * 2);
     ctx.fill();
   }
 
-  function drawJetPlayer(ctx, p, animTime) {
+  function drawJetFighter(ctx, x, y, animTime, options) {
+    options = options || {};
+    var facing = options.facing || 1;
+    var color = options.color || '#58a6ff';
+    var blasting = options.blast !== false;
+    var strongBlast = !!options.strongBlast;
+    var flicker = 20 + Math.sin(animTime * 38) * 6 + Math.random() * 4;
+    var packX = facing > 0 ? -15 : 4;
+    var nozzleX = facing > 0 ? -17 : 7;
+
     ctx.save();
-    ctx.translate(p.x, p.y);
-
-    var laneDelta = Math.abs(p.y - JET_LANES[p.targetLane]);
-    var blasting = p.thrust || laneDelta > 2;
-    var strongBlast = !!p.thrust;
-    var flicker = 22 + Math.sin(animTime * 38) * 7 + Math.random() * 5;
-
-    ctx.strokeStyle = '#6e7681';
-    ctx.fillStyle = '#484f58';
-    ctx.lineWidth = 2;
-    ctx.lineCap = 'round';
+    ctx.translate(x, y);
+    ctx.scale(facing, 1);
 
     if (blasting) {
-      drawJetBlast(ctx, 5, flicker, strongBlast);
-      drawJetBlast(ctx, 15, flicker * 0.92, strongBlast);
+      drawJetBlast(ctx, nozzleX, 5, flicker, strongBlast, facing > 0 ? -1 : 1);
+      drawJetBlast(ctx, nozzleX, 15, flicker * 0.92, strongBlast, facing > 0 ? -1 : 1);
     }
 
     ctx.fillStyle = '#3d444d';
-    ctx.fillRect(-15, -4, 11, 24);
-    ctx.strokeRect(-15, -4, 11, 24);
-    ctx.fillStyle = '#58a6ff';
-    ctx.fillRect(-13, 0, 7, 8);
-    ctx.fillStyle = '#6e7681';
-    ctx.fillRect(-17, 3, 3, 5);
-    ctx.fillRect(-17, 13, 3, 5);
+    ctx.fillRect(packX, -4, 11, 24);
+    ctx.strokeStyle = '#6e7681';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(packX, -4, 11, 24);
+    ctx.fillStyle = color;
+    ctx.fillRect(packX + 2, 0, 7, 8);
 
-    ctx.strokeStyle = '#58a6ff';
+    ctx.strokeStyle = color;
     ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
     ctx.beginPath();
     ctx.arc(0, -10, 5, 0, Math.PI * 2);
     ctx.stroke();
@@ -67,10 +64,8 @@
     ctx.moveTo(0, 0);
     ctx.lineTo(10, 2);
     ctx.stroke();
-    ctx.fillStyle = '#58a6ff';
+    ctx.fillStyle = color;
     ctx.fillRect(10, 0, 8, 3);
-
-    ctx.lineWidth = 2.5;
     ctx.beginPath();
     ctx.moveTo(0, 10);
     ctx.lineTo(-5, 22);
@@ -84,14 +79,16 @@
   GameModes.register({
     id: 'jetside',
     name: 'Jet Side',
-    desc: 'Jetpack between three lanes. Shoot baddies, dodge debris.',
-    hint: '↑ ↓ change lane · → thrust · SPACE shoot · mouse aim',
+    desc: 'Three-lane jetpack duel. Hostiles pack boosters and shoot back — dodge debris.',
+    hint: '↑ ↓ lane · → thrust · SPACE shoot · dodge red bolts',
     legacyHighScoreKeys: ['sidescroll'],
-    flags: { jetSide: true },
+    flags: { jetSide: true, enemyShoots: true },
 
     reset: function (g) {
       g.JET_LANES = JET_LANES;
       g.obstacles = [];
+      g.jetKills = 0;
+      g.jetTier = 0;
     },
 
     createPlayer: function (g) {
@@ -115,19 +112,24 @@
 
     spawn: function (g, dt) {
       g.spawnTimer += dt;
-      if (g.spawnTimer >= 1.8 && g.enemies.length < 8) {
+      var cap = 8 + g.jetTier;
+      if (g.spawnTimer >= Math.max(1.2, 1.9 - g.jetTier * 0.08) && g.enemies.length < cap) {
         g.spawnTimer = 0;
         var lane = Math.floor(Math.random() * 3);
         S.spawnEnemyAt(g, g.canvas.width + 50, JET_LANES[lane], 'grunt');
-        g.enemies[g.enemies.length - 1].speed = 120 + Math.random() * 60;
+        var e = g.enemies[g.enemies.length - 1];
+        e.speed = 110 + Math.random() * 70 + g.jetTier * 8;
+        e.color = g.jetTier > 2 ? '#ffa657' : '#f85149';
+        e.shootCooldown = 0.6 + Math.random() * 0.8;
+        e.jetLane = lane;
       }
-      if (Math.random() < dt * 0.35) {
+      if (Math.random() < dt * (0.28 + g.jetTier * 0.04)) {
         var obsLane = Math.floor(Math.random() * 3);
         g.obstacles.push({
           x: g.canvas.width + 40,
           y: JET_LANES[obsLane],
-          radius: 16,
-          speed: 180 + Math.random() * 40
+          radius: 14 + Math.min(6, g.jetTier),
+          speed: 170 + Math.random() * 50 + g.jetTier * 10
         });
       }
     },
@@ -154,6 +156,16 @@
       }
     },
 
+    onKill: function (g) {
+      g.jetKills += 1;
+      if (g.jetKills % 12 === 0) {
+        g.jetTier += 1;
+        g.ui.waveBanner.textContent = 'ACE WAVE ' + (g.jetTier + 1);
+        g.ui.waveBanner.classList.add('visible');
+        setTimeout(function () { g.ui.waveBanner.classList.remove('visible'); }, 1400);
+      }
+    },
+
     getShootVector: function () {
       return { x: 1, y: 0 };
     },
@@ -163,6 +175,8 @@
     },
 
     updateEnemy: function (g, dt, enemy, index) {
+      var laneY = JET_LANES[enemy.jetLane != null ? enemy.jetLane : 1];
+      enemy.y += (laneY - enemy.y) * 4 * dt;
       enemy.x -= enemy.speed * dt;
       if (enemy.x < -40) {
         g.enemies.splice(index, 1);
@@ -221,13 +235,31 @@
     },
 
     drawEnemy: function (g, ctx, e) {
-      var wobbleOffset = Math.sin(e.wobble) * 2;
-      S.drawStickmanUpright(ctx, e.x, e.y + wobbleOffset, -1, 0, e.color || '#f85149', e.scale || 1, {});
+      drawJetFighter(ctx, e.x, e.y + Math.sin(e.wobble) * 2, g.animTime, {
+        facing: -1,
+        color: e.color || '#f85149',
+        blast: true,
+        strongBlast: false
+      });
       return true;
     },
 
     renderPlayer: function (g, ctx) {
-      drawJetPlayer(ctx, g.player, g.animTime);
+      var laneDelta = Math.abs(g.player.y - JET_LANES[g.player.targetLane]);
+      drawJetFighter(ctx, g.player.x, g.player.y, g.animTime, {
+        facing: 1,
+        color: '#58a6ff',
+        blast: g.player.thrust || laneDelta > 2,
+        strongBlast: !!g.player.thrust
+      });
+    },
+
+    drawHud: function (g, ctx) {
+      if (g.jetTier > 0) {
+        ctx.fillStyle = 'rgba(255, 166, 87, 0.9)';
+        ctx.font = '600 12px Segoe UI, system-ui, sans-serif';
+        ctx.fillText('Ace tier ' + (g.jetTier + 1), 16, 24);
+      }
     }
   });
 })();

@@ -5,34 +5,57 @@
     { id: 'classic', name: 'Classic', color: '#58a6ff' },
     { id: 'lean', name: 'Lean', color: '#79c0ff' },
     { id: 'heavy', name: 'Heavy', color: '#388bfd' },
-    { id: 'scout', name: 'Scout', color: '#a5d6ff' }
+    { id: 'scout', name: 'Scout', color: '#a5d6ff' },
+    { id: 'ninja', name: 'Ninja', color: '#8b949e' },
+    { id: 'sage', name: 'Sage', color: '#e3b341' }
   ];
 
-  function draw(ctx, modelId, x, y, faceX, faceY, options) {
-    options = options || {};
-    var model = null;
-    for (var i = 0; i < MODELS.length; i++) {
-      if (MODELS[i].id === modelId) { model = MODELS[i]; break; }
-    }
-    if (!model) model = MODELS[0];
-    var color = options.color || model.color;
-    var scale = options.scale || 1.1;
-    var armed = options.armed !== false;
-    var legSwing = options.legSwing || 0;
-
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.scale(scale, scale);
-
-    var flip = faceX < 0 ? -1 : 1;
-    ctx.scale(flip, 1);
-    var lean = Math.max(-0.4, Math.min(0.4, faceY * 0.35));
-    ctx.rotate(lean);
-
+  function drawHeadAndBody(ctx, modelId, color) {
     ctx.strokeStyle = color;
     ctx.lineCap = 'round';
 
-    if (modelId === 'lean') {
+    if (modelId === 'ninja') {
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(0, -10, 4.5, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = '#21262d';
+      ctx.fillRect(-8, -14, 16, 4);
+      ctx.strokeStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(-8, -12);
+      ctx.lineTo(8, -12);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(0, -5);
+      ctx.lineTo(0, 11);
+      ctx.stroke();
+    } else if (modelId === 'sage') {
+      ctx.fillStyle = '#c9a227';
+      ctx.beginPath();
+      ctx.moveTo(0, -22);
+      ctx.lineTo(-14, -8);
+      ctx.lineTo(14, -8);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = '#a88620';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(0, -6, 4.5, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(0, -1);
+      ctx.lineTo(0, 12);
+      ctx.stroke();
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(-9, 4);
+      ctx.lineTo(9, 4);
+      ctx.stroke();
+    } else if (modelId === 'lean') {
       ctx.lineWidth = 1.6;
       ctx.beginPath();
       ctx.arc(0, -13, 4, 0, Math.PI * 2);
@@ -75,8 +98,34 @@
       ctx.lineTo(0, 10);
       ctx.stroke();
     }
+  }
 
-    ctx.lineWidth = modelId === 'heavy' ? 3 : modelId === 'lean' ? 1.6 : 2.5;
+  function draw(ctx, modelId, x, y, faceX, faceY, options) {
+    options = options || {};
+    var model = null;
+    for (var i = 0; i < MODELS.length; i++) {
+      if (MODELS[i].id === modelId) { model = MODELS[i]; break; }
+    }
+    if (!model) model = MODELS[0];
+    var color = options.color || model.color;
+    var scale = options.scale || 1.1;
+    var armed = options.armed !== false;
+    var legSwing = options.legSwing || 0;
+
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(scale, scale);
+
+    var flip = faceX < 0 ? -1 : 1;
+    ctx.scale(flip, 1);
+    var lean = Math.max(-0.4, Math.min(0.4, faceY * 0.35));
+    ctx.rotate(lean);
+
+    drawHeadAndBody(ctx, modelId, color);
+
+    ctx.strokeStyle = color;
+    ctx.lineWidth = modelId === 'heavy' ? 3 : modelId === 'lean' || modelId === 'ninja' ? 1.6 : 2.5;
+    ctx.lineCap = 'round';
 
     ctx.beginPath();
     ctx.moveTo(0, 0);
@@ -97,11 +146,12 @@
       ctx.stroke();
     }
 
+    var legBase = modelId === 'lean' ? 14 : modelId === 'sage' ? 12 : 10;
     var legLen = modelId === 'lean' ? 24 : 22;
     ctx.beginPath();
-    ctx.moveTo(0, modelId === 'lean' ? 14 : 10);
+    ctx.moveTo(0, legBase);
     ctx.lineTo(-5 + legSwing, legLen);
-    ctx.moveTo(0, modelId === 'lean' ? 14 : 10);
+    ctx.moveTo(0, legBase);
     ctx.lineTo(5 - legSwing, legLen);
     ctx.stroke();
 

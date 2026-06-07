@@ -423,6 +423,7 @@
     CANVAS_H: CANVAS_H,
     worldPixelW: WORLD_W * TILE,
     worldPixelH: WORLD_H * TILE,
+    SPLIT_X: SPLIT_X,
     gridLabel: WORLD_W + '×' + WORLD_H + ' tiles · ' + TILE + ' px each (' + (WORLD_W * TILE) + '×' + (WORLD_H * TILE) + ' px)',
 
     generateWorld: generateWorld,

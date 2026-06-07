@@ -43,8 +43,80 @@
       airborne: false,
       airTime: 0,
       lastImpact: 0,
-      fx: []
+      inRavine: false,
+      ravinePhase: 0,
+      fx: [],
+      cinematic: null,
+      cinemaCooldown: 18 + Math.random() * 12,
+      lightningTimer: 0
     };
+  }
+
+  function triggerCinematic(g, text, duration) {
+    g.truck.cinematic = { text: text, timer: duration || 2.4 };
+  }
+
+  function drawLightning(ctx, x, y, h, alpha) {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = '#fff8e7';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + 6, y + h * 0.35);
+    ctx.lineTo(x - 4, y + h * 0.55);
+    ctx.lineTo(x + 8, y + h);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawRavineFx(ctx, g, ravine, horizonY, cx) {
+    if (ravine < 0.15) return;
+
+    ctx.save();
+    var pulse = 0.5 + Math.sin(g.animTime * 6 + g.truck.ravinePhase) * 0.5;
+    var vignette = ctx.createRadialGradient(cx, horizonY + 80, 40, cx, horizonY + 80, g.canvas.width * 0.65);
+    vignette.addColorStop(0, 'rgba(255, 60, 20, 0)');
+    vignette.addColorStop(1, 'rgba(80, 10, 0, ' + (0.25 + ravine * 0.35) + ')');
+    ctx.fillStyle = vignette;
+    ctx.fillRect(0, 0, g.canvas.width, g.canvas.height);
+
+    ctx.fillStyle = 'rgba(255, 120, 40, ' + (0.08 + ravine * 0.12 * pulse) + ')';
+    ctx.fillRect(0, 0, g.canvas.width, g.canvas.height);
+
+    if (ravine > 0.35 && g.truck.lightningTimer <= 0) {
+      drawLightning(ctx, cx + (Math.random() - 0.5) * 200, horizonY - 20, 120 + Math.random() * 80, 0.5 + Math.random() * 0.4);
+      g.truck.lightningTimer = 0.12 + Math.random() * 0.18;
+    }
+
+    for (var d = 0; d < 5; d++) {
+      var dx = (d * 97 + g.truck.roadT * 4) % (g.canvas.width + 40) - 20;
+      var dy = horizonY + 60 + d * 22 + Math.sin(g.animTime * 2 + d) * 8;
+      ctx.fillStyle = 'rgba(60, 40, 35, 0.55)';
+      ctx.beginPath();
+      ctx.arc(dx, dy, 4 + d, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function drawCinematic(ctx, g) {
+    var c = g.truck.cinematic;
+    if (!c || c.timer <= 0) return;
+    var alpha = Math.min(1, c.timer / 0.5);
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+    ctx.fillRect(0, g.canvas.height * 0.12, g.canvas.width, 52);
+    ctx.strokeStyle = 'rgba(227, 179, 65, 0.5)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(24, g.canvas.height * 0.12, g.canvas.width - 48, 52);
+    ctx.fillStyle = '#e3b341';
+    ctx.font = '700 18px Segoe UI, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(c.text, g.canvas.width / 2, g.canvas.height * 0.12 + 33);
+    ctx.textAlign = 'left';
+    ctx.restore();
   }
 
   function spawnRoadExplosion(g, x, y, size) {
@@ -127,12 +199,19 @@
     var pitch = truck.pitch || 0;
     var cx = g.canvas.width / 2;
     var ravine = ravineDepth(truck.roadT);
+    truck.ravinePhase = ravine;
 
     var sky = ctx.createLinearGradient(0, 0, 0, g.canvas.height);
-    sky.addColorStop(0, '#020408');
-    sky.addColorStop(0.35, '#141c28');
-    sky.addColorStop(0.7, '#2a1810');
-    sky.addColorStop(1, '#1a0a08');
+    if (ravine > 0.45) {
+      sky.addColorStop(0, '#1a0810');
+      sky.addColorStop(0.4, '#3a1018');
+      sky.addColorStop(1, '#120608');
+    } else {
+      sky.addColorStop(0, '#020408');
+      sky.addColorStop(0.35, '#141c28');
+      sky.addColorStop(0.7, '#2a1810');
+      sky.addColorStop(1, '#1a0a08');
+    }
     ctx.fillStyle = sky;
     ctx.fillRect(0, 0, g.canvas.width, g.canvas.height);
 
@@ -167,21 +246,29 @@
     ctx.fill();
 
     if (ravine > 0.2) {
-      var glow = ctx.createLinearGradient(0, horizonY + 20, 0, horizonY + 180);
-      glow.addColorStop(0, 'rgba(255, 90, 30, 0.55)');
-      glow.addColorStop(0.5, 'rgba(180, 40, 10, 0.35)');
-      glow.addColorStop(1, 'rgba(40, 10, 5, 0)');
+      var glow = ctx.createLinearGradient(0, horizonY + 20, 0, horizonY + 220);
+      glow.addColorStop(0, 'rgba(255, 90, 30, ' + (0.45 + ravine * 0.4) + ')');
+      glow.addColorStop(0.35, 'rgba(200, 50, 15, ' + (0.3 + ravine * 0.25) + ')');
+      glow.addColorStop(0.7, 'rgba(120, 20, 5, 0.35)');
+      glow.addColorStop(1, 'rgba(20, 5, 2, 0)');
       ctx.fillStyle = glow;
-      ctx.fillRect(-cx, horizonY + 10, cx * 2, 200 * ravine);
+      ctx.fillRect(-cx, horizonY + 10, cx * 2, 240 * ravine);
 
-      ctx.strokeStyle = 'rgba(255, 140, 60, 0.4)';
+      ctx.strokeStyle = 'rgba(255, 160, 80, ' + (0.25 + ravine * 0.35) + ')';
       ctx.lineWidth = 2;
-      for (var ri = 0; ri < 6; ri++) {
-        var rx = -60 + ri * 24 + (truck.roadT * 3) % 24;
+      for (var ri = 0; ri < 8; ri++) {
+        var rx = -80 + ri * 22 + (truck.roadT * 4) % 22;
         ctx.beginPath();
-        ctx.moveTo(rx, horizonY + 40 + ri * 8);
-        ctx.lineTo(rx + 8, horizonY + 90 + ri * 14);
+        ctx.moveTo(rx, horizonY + 35 + ri * 10);
+        ctx.lineTo(rx + 10, horizonY + 100 + ri * 16);
         ctx.stroke();
+      }
+
+      ctx.fillStyle = 'rgba(255, 200, 80, ' + (0.15 * ravine) + ')';
+      for (var em = 0; em < 4; em++) {
+        ctx.beginPath();
+        ctx.arc(-60 + em * 40 + Math.sin(g.animTime * 3 + em) * 6, horizonY + 70 + em * 18, 3, 0, Math.PI * 2);
+        ctx.fill();
       }
     }
 
@@ -209,6 +296,8 @@
     }
     ctx.restore();
     ctx.restore();
+
+    drawRavineFx(ctx, g, ravine, horizonY + bump * 0.35, cx);
 
     for (var fi = 0; fi < truck.fx.length; fi++) {
       var fx = truck.fx[fi];
@@ -336,10 +425,20 @@
       if (truck.airborne) truck.airTime += dt;
       else truck.airTime = 0;
 
+      var rav = ravineDepth(truck.roadT);
+      if (rav > 0.45 && !truck.inRavine) {
+        truck.inRavine = true;
+        triggerCinematic(g, 'RAVINE — HOLD THE LINE!');
+        g.shakeTimer = Math.max(g.shakeTimer, 0.4);
+      } else if (rav <= 0.35) {
+        truck.inRavine = false;
+      }
+
       if (wasAirborne && !truck.airborne && truck.bumpVel > 40) {
         spawnRoadExplosion(g, g.canvas.width / 2 + truck.roll * 40, g.canvas.height - 40, 1.4);
         g.shakeTimer = Math.max(g.shakeTimer, 0.45);
         truck.lastImpact = g.animTime;
+        triggerCinematic(g, 'HARD LANDING!');
       }
 
       if (Math.abs(truck.bumpVel - prevVel) > 120 * dt && g.animTime - truck.lastImpact > 0.25) {
@@ -355,6 +454,19 @@
         spawnRoadExplosion(g, g.canvas.width / 2 + (Math.random() - 0.5) * 80, g.canvas.height * 0.42, 1.1);
         g.shakeTimer = Math.max(g.shakeTimer, 0.35);
       }
+
+      truck.cinemaCooldown -= dt;
+      if (truck.cinemaCooldown <= 0 && !truck.cinematic) {
+        var lines = ['DRONE SWARM INBOUND', 'KEEP FIRING', 'ROAD GETS WORSE AHEAD', 'TRUCK HEAVY — AIM STEADY'];
+        triggerCinematic(g, lines[Math.floor(Math.random() * lines.length)]);
+        truck.cinemaCooldown = 28 + Math.random() * 22;
+      }
+
+      if (truck.cinematic) {
+        truck.cinematic.timer -= dt;
+        if (truck.cinematic.timer <= 0) truck.cinematic = null;
+      }
+      if (truck.lightningTimer > 0) truck.lightningTimer -= dt;
 
       truck.inertiaX += truck.bumpVel * 0.09 + truck.roll * 55 * dt + curve * 80 * dt;
       truck.inertiaY += truck.pitch * 42 * dt;
@@ -447,6 +559,10 @@
 
     drawBackground: function (g, ctx) {
       drawScene(ctx, g);
+    },
+
+    renderOverlay: function (g, ctx) {
+      drawCinematic(ctx, g);
     },
 
     drawEnemy: function (g, ctx, e) {

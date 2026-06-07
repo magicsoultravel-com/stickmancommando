@@ -21,6 +21,8 @@
       reset: function (g) {
         g.spawnInterval = cfg.spawnInterval != null ? cfg.spawnInterval : 2.2;
         g.maxEnemies = cfg.maxEnemies != null ? cfg.maxEnemies : 12;
+        g.streak = 0;
+        g.streakTimer = 0;
       },
 
       createPlayer: function (g) {
@@ -52,8 +54,18 @@
       },
 
       onKill: function (g, enemy) {
+        g.streakTimer = 2.5;
+        g.streak = (g.streak || 0) + 1;
+        if (g.streak > 1) g.score += g.streak * 2;
         if (cfg.medkits && Math.random() <= 0.35) {
           g.pickups.push({ x: enemy.x, y: enemy.y, radius: 10, bob: 0 });
+        }
+      },
+
+      tick: function (g, dt) {
+        if (g.streakTimer > 0) {
+          g.streakTimer -= dt;
+          if (g.streakTimer <= 0) g.streak = 0;
         }
       },
 

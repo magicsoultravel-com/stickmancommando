@@ -48,6 +48,8 @@
       g.maxEnemies = 55;
       g.zombieKillCount = 0;
       g.spawnEdge = Math.floor(Math.random() * 4);
+      g.comboCount = 0;
+      g.comboTimer = 0;
     },
 
     createPlayer: function (g) {
@@ -74,10 +76,27 @@
       S.moveTopDown(g, dt);
     },
 
+    tick: function (g, dt) {
+      if (g.comboTimer > 0) {
+        g.comboTimer -= dt;
+        if (g.comboTimer <= 0) g.comboCount = 0;
+      }
+    },
+
     onKill: function (g, enemy, hitAngle) {
       if (enemy.isZombie && !enemy.isBrute) {
         g.zombieKillCount += 1;
         if (g.zombieKillCount % 10 === 0) spawnBrute(g);
+      }
+      g.comboTimer = 2.2;
+      g.comboCount = (g.comboCount || 0) + 1;
+      if (g.comboCount > 1) {
+        g.score += g.comboCount * 3;
+        if (g.comboCount % 5 === 0) {
+          g.ui.waveBanner.textContent = 'COMBO x' + g.comboCount;
+          g.ui.waveBanner.classList.add('visible');
+          setTimeout(function () { g.ui.waveBanner.classList.remove('visible'); }, 900);
+        }
       }
       if (enemy.isBrute && window.Gore) {
         Gore.spawnExplosion(enemy.x, enemy.y, enemy.color, hitAngle);

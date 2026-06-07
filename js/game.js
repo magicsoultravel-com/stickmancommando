@@ -16,10 +16,11 @@
   var exitBtn = document.getElementById('exit-btn');
   var speedBtn = document.getElementById('speed-btn');
   var playControls = document.getElementById('play-controls');
-  var modelPickerWrap = document.getElementById('model-picker-wrap');
   var modelBtn = document.getElementById('model-btn');
-  var modelMenu = document.getElementById('model-menu');
-  var modelPreview = document.getElementById('model-preview');
+  var modelModal = document.getElementById('model-modal');
+  var modelModalGrid = document.getElementById('model-modal-grid');
+  var modelModalPreview = document.getElementById('model-modal-preview');
+  var modelModalClose = document.getElementById('model-modal-close');
   var modeBadge = document.getElementById('mode-badge');
   var waveBanner = document.getElementById('wave-banner');
   var healthFill = document.getElementById('health-fill');
@@ -76,6 +77,7 @@
   var SPEED_LABELS = ['1×', '2×', '½×'];
   var speedIndex = 0;
   var gameSpeed = 1;
+  var expandedModeId = null;
 
   var g = {
     canvas: canvas,
@@ -185,7 +187,7 @@
     return mode && mode.flags && mode.flags[name];
   }
 
-  buildModelPicker();
+  syncModelBtn();
   mode = resolveMode();
   buildModePicker();
   setCanvasForMode();
@@ -216,31 +218,26 @@
     return 'Classic';
   }
 
-  function drawModelPreview() {
-    if (!modelPreview || !window.CharacterModels) return;
-    var pctx = modelPreview.getContext('2d');
-    pctx.clearRect(0, 0, modelPreview.width, modelPreview.height);
-    pctx.fillStyle = '#161b22';
-    pctx.fillRect(0, 0, modelPreview.width, modelPreview.height);
+  function drawModelPreview(canvasEl) {
+    if (!canvasEl || !window.CharacterModels) return;
+    var pctx = canvasEl.getContext('2d');
+    pctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
+    pctx.fillStyle = '#0d1117';
+    pctx.fillRect(0, 0, canvasEl.width, canvasEl.height);
     var bob = Math.sin(animTime * 3) * 2;
-    CharacterModels.draw(pctx, characterModel, modelPreview.width / 2, modelPreview.height / 2 + bob, 1, 0, { armed: true });
+    CharacterModels.draw(pctx, characterModel, canvasEl.width / 2, canvasEl.height / 2 + bob, 1, 0, { armed: true });
   }
 
-  function closeModelMenu() {
-    modelMenu.hidden = true;
-    modelBtn.classList.remove('open');
-    modelBtn.setAttribute('aria-expanded', 'false');
+  function closeModelModal() {
+    modelModal.hidden = true;
+    modelModal.setAttribute('aria-hidden', 'true');
   }
 
-  function openModelMenu() {
-    modelMenu.hidden = false;
-    modelBtn.classList.add('open');
-    modelBtn.setAttribute('aria-expanded', 'true');
-  }
-
-  function toggleModelMenu() {
-    if (modelMenu.hidden) openModelMenu();
-    else closeModelMenu();
+  function openModelModal() {
+    buildModelModalGrid();
+    drawModelPreview(modelModalPreview);
+    modelModal.hidden = false;
+    modelModal.setAttribute('aria-hidden', 'false');
   }
 
   function selectCharacterModel(id) {
@@ -248,35 +245,28 @@
     g.characterModel = characterModel;
     localStorage.setItem(CHARACTER_KEY, characterModel);
     modelBtn.textContent = 'Model · ' + getModelName(characterModel);
-    buildModelMenu();
-    drawModelPreview();
-    closeModelMenu();
+    buildModelModalGrid();
+    drawModelPreview(modelModalPreview);
   }
 
-  function buildModelMenu() {
+  function buildModelModalGrid() {
     if (!window.CharacterModels) return;
-    modelMenu.innerHTML = '';
+    modelModalGrid.innerHTML = '';
     CharacterModels.list.forEach(function (model) {
       var btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = 'model-option' + (model.id === characterModel ? ' selected' : '');
+      btn.className = 'model-pick' + (model.id === characterModel ? ' selected' : '');
       btn.textContent = model.name;
-      btn.dataset.char = model.id;
-      btn.setAttribute('role', 'option');
-      btn.setAttribute('aria-selected', model.id === characterModel ? 'true' : 'false');
-      btn.addEventListener('click', function (e) {
-        e.stopPropagation();
+      btn.addEventListener('click', function () {
         selectCharacterModel(model.id);
       });
-      modelMenu.appendChild(btn);
+      modelModalGrid.appendChild(btn);
     });
   }
 
-  function buildModelPicker() {
-    if (!window.CharacterModels) return;
+  function syncModelBtn() {
+    if (!modelBtn) return;
     modelBtn.textContent = 'Model · ' + getModelName(characterModel);
-    buildModelMenu();
-    drawModelPreview();
   }
 
   function canvasPoint(evt) {
@@ -312,13 +302,32 @@
       var card = document.createElement('button');
       card.type = 'button';
       card.className = 'mode-card' + (entry.id === currentModeId ? ' selected' : '');
+      if (entry.id === expandedModeId) card.classList.add('expanded');
       card.dataset.mode = entry.id;
-      card.innerHTML = '<h3>' + entry.name + '</h3><p>' + entry.desc + '</p>';
-      card.addEventListener('click', function () {
+      card.innerHTML =
+        '<div class="mode-card-head"><h3>' + entry.name + '</h3><span class="mode-chevron">▸</span></div>' +
+        '<p class="mode-desc">' + entry.desc + '</p>';
+
+      card.addEventListener('click', function (e) {
+        if (e.target.classList.contains('mode-chevron')) {
+          e.stopPropagation();
+          if (card.classList.contains('expanded')) {
+            card.classList.remove('expanded');
+            expandedModeId = null;
+          } else {
+            modePicker.querySelectorAll('.mode-card').forEach(function (c) {
+              c.classList.remove('expanded');
+            });
+            card.classList.add('expanded');
+            expandedModeId = entry.id;
+          }
+          return;
+        }
         selectMode(entry.id);
         GameAudio.resume();
         GameAudio.playModeTune(entry.id);
       });
+
       modePicker.appendChild(card);
     });
   }
@@ -420,12 +429,10 @@
     overlaySubtitle.textContent = subtitle;
     startBtn.hidden = !options.showDeploy;
     autoshootBtn.hidden = !options.showDeploy;
-    modelPickerWrap.hidden = !options.showPicker;
+    modelBtn.hidden = !options.showDeploy;
     modePicker.hidden = !options.showPicker;
-    if (options.showPicker) {
-      buildModelPicker();
-      closeModelMenu();
-    }
+    if (options.showDeploy) syncModelBtn();
+    closeModelModal();
     startBtn.textContent = options.deployLabel || 'Deploy';
 
     var existingBoard = document.getElementById('mock-leaderboard');
@@ -570,6 +577,7 @@
     g.score = score;
     S.spawnParticles(g, e.x, e.y, e.color || '#f85149', e.isDrone ? 12 : 8);
     if (mode.onKill) mode.onKill(g, e, hitAngle);
+    score = g.score;
     enemies.splice(index, 1);
     updateHud();
   }
@@ -589,6 +597,7 @@
     if (mode.spawn) mode.spawn(g, dt);
     if (mode.move) mode.move(g, dt);
     if (mode.updateObstacles) mode.updateObstacles(g, dt);
+    if (mode.tick) mode.tick(g, dt);
     pullFromG();
 
     if (keys[' '] || keys['Space']) shoot();
@@ -784,6 +793,8 @@
 
     if (mode.drawHud) mode.drawHud(g, ctx);
 
+    if (mode.renderOverlay) mode.renderOverlay(g, ctx);
+
     ctx.restore();
   }
 
@@ -791,8 +802,8 @@
     mode = resolveMode();
     syncGRefs();
     g.mode = mode;
-    if (state === STATE.MODES || state === STATE.INTRO || state === STATE.GAMEOVER) {
-      drawModelPreview();
+    if (!modelModal.hidden) {
+      drawModelPreview(modelModalPreview);
     }
     if (mode.render) {
       mode.render(g, ctx);
@@ -860,18 +871,15 @@
 
   modelBtn.addEventListener('click', function (e) {
     e.stopPropagation();
-    toggleModelMenu();
+    openModelModal();
   });
 
-  document.addEventListener('click', function (e) {
-    if (!modelPickerWrap.hidden && !e.target.closest('#model-picker-wrap')) {
-      closeModelMenu();
-    }
-  });
+  modelModalClose.addEventListener('click', closeModelModal);
+  modelModal.querySelector('.modal-backdrop').addEventListener('click', closeModelModal);
 
   overlay.addEventListener('click', function (e) {
-    if (e.target.closest('.mode-card') || e.target.closest('.model-option') ||
-        e.target.closest('#model-picker-wrap') ||
+    if (e.target.closest('.mode-card') || e.target.closest('.mode-chevron') ||
+        e.target.closest('#model-modal') || e.target === modelBtn ||
         e.target === startBtn || e.target === autoshootBtn) return;
     if (state === STATE.MODES && !startBtn.hidden) {
       GameAudio.resume().then(startGame);

@@ -37,6 +37,9 @@
         g.wave.toSpawn -= 1;
       }
       if (g.wave.phase === 'fight' && g.enemies.length === 0 && g.wave.toSpawn === 0) {
+        g.player.health = Math.min(g.player.maxHealth, g.player.health + 12 + g.wave.number * 2);
+        g.score += 20 + g.wave.number * 10;
+        g.ui.waveBanner.textContent = 'Wave ' + g.wave.number + ' cleared!';
         startNextWave(g);
       }
     },

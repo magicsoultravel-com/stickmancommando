@@ -43,17 +43,21 @@
         <p id="overlay-subtitle"></p>
         <p id="overlay-hint">↑ ↓ ← → move &nbsp;·&nbsp; SPACE shoot &nbsp;·&nbsp; mouse aim</p>
         <div id="mode-picker" hidden></div>
-        <div id="model-picker-wrap" hidden>
-          <canvas id="model-preview" width="72" height="72" aria-hidden="true"></canvas>
-          <div class="model-picker-anchor">
-            <button id="model-btn" type="button" aria-haspopup="listbox" aria-expanded="false">Model · Classic</button>
-            <div id="model-menu" class="model-menu" role="listbox" hidden></div>
-          </div>
-        </div>
       </div>
       <div id="overlay-actions">
         <button id="start-btn" type="button" hidden>Deploy</button>
+        <button id="model-btn" type="button" class="toggle-btn" hidden>Model · Classic</button>
         <button id="autoshoot-btn" type="button" class="toggle-btn">Auto: OFF</button>
+      </div>
+    </div>
+
+    <div id="model-modal" class="modal" hidden aria-hidden="true">
+      <div class="modal-backdrop" data-close="1"></div>
+      <div class="modal-panel" role="dialog" aria-labelledby="model-modal-title">
+        <h3 id="model-modal-title">Pick your commando</h3>
+        <canvas id="model-modal-preview" width="120" height="120"></canvas>
+        <div id="model-modal-grid"></div>
+        <button id="model-modal-close" type="button" class="toggle-btn">Done</button>
       </div>
     </div>
   </div>

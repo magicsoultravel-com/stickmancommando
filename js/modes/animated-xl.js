@@ -14,6 +14,8 @@
       XLMode.generateWorld(Date.now());
       g.spawnInterval = 2;
       g.maxEnemies = 18;
+      g.exploredEast = false;
+      g.islandKills = 0;
     },
 
     setCanvas: function (g) {
@@ -93,6 +95,14 @@
       S.applyMouseAim(g);
       S.applyMouseMoveXL(g, dt);
 
+      if (!g.exploredEast && g.player.x > XLMode.SPLIT_X * XLMode.TILE) {
+        g.exploredEast = true;
+        g.score += 75;
+        g.ui.waveBanner.textContent = 'Wild east discovered +75';
+        g.ui.waveBanner.classList.add('visible');
+        setTimeout(function () { g.ui.waveBanner.classList.remove('visible'); }, 1600);
+      }
+
       g.camera.x = g.player.x - g.canvas.width / 2;
       g.camera.y = g.player.y - g.canvas.height / 2;
       g.camera.x = Math.max(0, Math.min(XLMode.worldPixelW - g.canvas.width, g.camera.x));
@@ -105,6 +115,14 @@
 
     getWorldBounds: function () {
       return { w: XLMode.worldPixelW, h: XLMode.worldPixelH };
+    },
+
+    onKill: function (g) {
+      g.islandKills = (g.islandKills || 0) + 1;
+      if (g.islandKills % 15 === 0) {
+        g.maxEnemies = Math.min(32, g.maxEnemies + 2);
+        g.spawnInterval = Math.max(0.75, g.spawnInterval - 0.08);
+      }
     },
 
     updateEnemy: function (g, dt, enemy) {
