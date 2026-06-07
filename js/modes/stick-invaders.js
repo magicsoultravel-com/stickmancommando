@@ -8,9 +8,13 @@
   var CELL_Y = 44;
   var FORM_TOP = 72;
 
-  var ROW_TYPES = ['runner', 'runner', 'grunt', 'grunt', 'tank'];
-  var ROW_COLORS = ['#ffa657', '#ffa657', '#f85149', '#f85149', '#bc8cff'];
-  var ROW_POINTS = [30, 30, 20, 20, 40];
+  var INVADER_ROWS = [
+    { health: 1, radius: 11, scale: 0.9, points: 30, color: '#ffa657', label: 'runner' },
+    { health: 1, radius: 11, scale: 0.9, points: 30, color: '#ffa657', label: 'runner' },
+    { health: 1, radius: 11, scale: 1, points: 20, color: '#f85149', label: 'grunt' },
+    { health: 1, radius: 11, scale: 1, points: 20, color: '#f85149', label: 'grunt' },
+    { health: 3, radius: 14, scale: 1.15, points: 40, color: '#bc8cff', label: 'tank' }
+  ];
 
   function createShields(g) {
     var shields = [];
@@ -56,23 +60,22 @@
     form.dropPending = false;
 
     for (var row = 0; row < ROWS; row++) {
+      var rowDef = INVADER_ROWS[row];
       for (var col = 0; col < COLS; col++) {
-        var typeKey = ROW_TYPES[row];
-        var type = S.ENEMY_TYPES[typeKey];
         g.enemies.push({
           x: 0,
           y: 0,
           col: col,
           row: row,
-          radius: typeKey === 'tank' ? 14 : 11,
+          radius: rowDef.radius,
           speed: 0,
-          health: type.health,
-          maxHealth: type.health,
+          health: rowDef.health,
+          maxHealth: rowDef.health,
           wobble: Math.random() * Math.PI * 2,
-          type: typeKey,
-          color: ROW_COLORS[row],
-          scale: typeKey === 'tank' ? 1.15 : typeKey === 'runner' ? 0.9 : 1,
-          points: ROW_POINTS[row],
+          type: rowDef.label,
+          color: rowDef.color,
+          scale: rowDef.scale,
+          points: rowDef.points,
           isInvader: true,
           shootCooldown: 0
         });
