@@ -69,6 +69,11 @@
       { freq: 87, type: 'sawtooth' },
       { freq: 73, dur: 0.4, vol: 1.3, gap: 0.5 }
     ],
+    stickmanisland: [
+      { freq: 196, type: 'triangle' },
+      { freq: 247, type: 'triangle' },
+      { freq: 294, dur: 0.35, gap: 0.45 }
+    ],
     animatedxl: [
       { freq: 196, type: 'triangle' },
       { freq: 247, type: 'triangle' },

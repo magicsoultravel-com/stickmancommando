@@ -3,10 +3,11 @@
   var S = window.GameShared;
 
   GameModes.register({
-    id: 'animatedxl',
-    name: 'Animated XL',
-    desc: 'Big scrollable wilds — hills, rivers, bridges, trees. Lean stickmen, enemy fire.',
-    hint: '↑ ↓ ← → or mouse · SPACE · dodge red bullets · use bridges',
+    id: 'stickmanisland',
+    name: 'Stickman Island',
+    desc: '88×88 grid · 64 px tiles (5632×5632 px world). You spawn at the centre — simple stickman lawns west, wild rivers & bridges east.',
+    hint: '↑ ↓ ← → or mouse · SPACE · cross bridges · explore east',
+    legacyHighScoreKeys: ['animatedxl'],
     flags: { xl: true, mouseMove: true, enemyShoots: true },
 
     reset: function (g) {
@@ -22,9 +23,10 @@
     },
 
     createPlayer: function (g) {
+      var spawn = XLMode.getSpawnPoint();
       return {
-        x: XLMode.worldPixelW / 2,
-        y: XLMode.worldPixelH / 2,
+        x: spawn.x,
+        y: spawn.y,
         vx: 0,
         vy: 0,
         speed: 240,
@@ -43,7 +45,7 @@
       g.spawnTimer += dt;
       if (g.spawnTimer >= g.spawnInterval && g.enemies.length < g.maxEnemies) {
         g.spawnTimer = 0;
-        for (var attempt = 0; attempt < 8; attempt++) {
+        for (var attempt = 0; attempt < 10; attempt++) {
           var angle = Math.random() * Math.PI * 2;
           var dist = 380 + Math.random() * 420;
           var ex = g.player.x + Math.cos(angle) * dist;
@@ -127,7 +129,7 @@
         ctx.fillStyle = 'rgba(139, 148, 158, 0.9)';
         ctx.font = '600 14px Segoe UI, system-ui, sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('Press Deploy to generate the map', g.canvas.width / 2, g.canvas.height / 2);
+        ctx.fillText('Press Deploy to generate the island', g.canvas.width / 2, g.canvas.height / 2);
         ctx.textAlign = 'left';
         ctx.restore();
         return;
@@ -165,7 +167,7 @@
 
       ctx.fillStyle = 'rgba(230, 237, 243, 0.75)';
       ctx.font = '600 12px Segoe UI, system-ui, sans-serif';
-      ctx.fillText('Animated XL — explore the wilds', 16, 24);
+      ctx.fillText('Stickman Island — ' + XLMode.gridLabel, 16, 24);
 
       ctx.restore();
     }
