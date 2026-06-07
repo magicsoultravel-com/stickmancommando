@@ -16,7 +16,6 @@
   var exitBtn = document.getElementById('exit-btn');
   var speedBtn = document.getElementById('speed-btn');
   var playControls = document.getElementById('play-controls');
-  var characterPicker = document.getElementById('character-picker');
   var modelPickerWrap = document.getElementById('model-picker-wrap');
   var modelBtn = document.getElementById('model-btn');
   var modelMenu = document.getElementById('model-menu');
@@ -421,7 +420,6 @@
     overlaySubtitle.textContent = subtitle;
     startBtn.hidden = !options.showDeploy;
     autoshootBtn.hidden = !options.showDeploy;
-    characterPicker.hidden = true;
     modelPickerWrap.hidden = !options.showPicker;
     modePicker.hidden = !options.showPicker;
     if (options.showPicker) {

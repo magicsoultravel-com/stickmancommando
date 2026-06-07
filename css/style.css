@@ -127,11 +127,11 @@ body {
   position: absolute;
   inset: 42px 0 0;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(13, 17, 23, 0.82);
+  flex-direction: column;
+  background: rgba(13, 17, 23, 0.88);
   backdrop-filter: blur(2px);
   transition: opacity 0.3s ease;
+  overflow: hidden;
 }
 
 #overlay.hidden {
@@ -139,9 +139,17 @@ body {
   pointer-events: none;
 }
 
-#overlay-content {
+#overlay-body {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 24px 12px;
   text-align: center;
-  padding: 24px;
+  width: 100%;
+  max-width: 860px;
+  margin: 0 auto;
 }
 
 #overlay-title {
@@ -168,10 +176,11 @@ body {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 10px;
+  width: 100%;
   max-width: 820px;
-  max-height: 280px;
+  max-height: min(240px, 38vh);
   overflow-y: auto;
-  margin: 0 auto 20px;
+  margin: 0 auto 16px;
   text-align: left;
   padding-right: 4px;
 }
@@ -214,10 +223,14 @@ body {
 }
 
 #overlay-actions {
+  flex-shrink: 0;
   display: flex;
   gap: 10px;
   justify-content: center;
   flex-wrap: wrap;
+  padding: 14px 24px 18px;
+  border-top: 1px solid #30363d;
+  background: rgba(13, 17, 23, 0.96);
 }
 
 #play-controls {
@@ -345,11 +358,11 @@ body {
   border: 1px solid #30363d;
   border-radius: 8px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
-  z-index: 30;
+  z-index: 50;
 }
 
-.model-menu[hidden] {
-  display: none;
+.model-menu:not([hidden]) {
+  display: block;
 }
 
 .model-option {
