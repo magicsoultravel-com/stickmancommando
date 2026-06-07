@@ -14,7 +14,13 @@
   var autoshootBtn = document.getElementById('autoshoot-btn');
   var hudAutoshoot = document.getElementById('hud-autoshoot');
   var exitBtn = document.getElementById('exit-btn');
+  var speedBtn = document.getElementById('speed-btn');
+  var playControls = document.getElementById('play-controls');
   var characterPicker = document.getElementById('character-picker');
+  var modelPickerWrap = document.getElementById('model-picker-wrap');
+  var modelBtn = document.getElementById('model-btn');
+  var modelMenu = document.getElementById('model-menu');
+  var modelPreview = document.getElementById('model-preview');
   var modeBadge = document.getElementById('mode-badge');
   var waveBanner = document.getElementById('wave-banner');
   var healthFill = document.getElementById('health-fill');
@@ -67,6 +73,10 @@
   var autoShoot = localStorage.getItem(AUTO_SHOOT_KEY) === '1';
   var characterModel = localStorage.getItem(CHARACTER_KEY) || 'classic';
   var mouse = { x: 0, y: 0, down: false, active: false };
+  var SPEED_STEPS = [1, 2, 0.5];
+  var SPEED_LABELS = ['1×', '2×', '½×'];
+  var speedIndex = 0;
+  var gameSpeed = 1;
 
   var g = {
     canvas: canvas,
@@ -150,6 +160,22 @@
     wave = g.wave;
     truck = g.truck;
     obstacles = g.obstacles;
+    shakeTimer = g.shakeTimer;
+  }
+
+  function syncSpeedUi() {
+    speedBtn.textContent = SPEED_LABELS[speedIndex];
+    speedBtn.title = 'Game speed: ' + SPEED_LABELS[speedIndex];
+  }
+
+  function toggleSpeed() {
+    speedIndex = (speedIndex + 1) % SPEED_STEPS.length;
+    gameSpeed = SPEED_STEPS[speedIndex];
+    syncSpeedUi();
+  }
+
+  function setPlayControlsVisible(visible) {
+    playControls.hidden = !visible;
   }
 
   function resolveMode() {
@@ -160,11 +186,12 @@
     return mode && mode.flags && mode.flags[name];
   }
 
-  buildCharacterPicker();
+  buildModelPicker();
   mode = resolveMode();
   buildModePicker();
   setCanvasForMode();
   syncAutoshootUi();
+  syncSpeedUi();
   loadHighScoreForMode(currentModeId);
 
   function syncAutoshootUi() {
@@ -182,23 +209,75 @@
     syncAutoshootUi();
   }
 
-  function buildCharacterPicker() {
+  function getModelName(id) {
+    if (!window.CharacterModels) return 'Classic';
+    for (var i = 0; i < CharacterModels.list.length; i++) {
+      if (CharacterModels.list[i].id === id) return CharacterModels.list[i].name;
+    }
+    return 'Classic';
+  }
+
+  function drawModelPreview() {
+    if (!modelPreview || !window.CharacterModels) return;
+    var pctx = modelPreview.getContext('2d');
+    pctx.clearRect(0, 0, modelPreview.width, modelPreview.height);
+    pctx.fillStyle = '#161b22';
+    pctx.fillRect(0, 0, modelPreview.width, modelPreview.height);
+    var bob = Math.sin(animTime * 3) * 2;
+    CharacterModels.draw(pctx, characterModel, modelPreview.width / 2, modelPreview.height / 2 + bob, 1, 0, { armed: true });
+  }
+
+  function closeModelMenu() {
+    modelMenu.hidden = true;
+    modelBtn.classList.remove('open');
+    modelBtn.setAttribute('aria-expanded', 'false');
+  }
+
+  function openModelMenu() {
+    modelMenu.hidden = false;
+    modelBtn.classList.add('open');
+    modelBtn.setAttribute('aria-expanded', 'true');
+  }
+
+  function toggleModelMenu() {
+    if (modelMenu.hidden) openModelMenu();
+    else closeModelMenu();
+  }
+
+  function selectCharacterModel(id) {
+    characterModel = id;
+    g.characterModel = characterModel;
+    localStorage.setItem(CHARACTER_KEY, characterModel);
+    modelBtn.textContent = 'Model · ' + getModelName(characterModel);
+    buildModelMenu();
+    drawModelPreview();
+    closeModelMenu();
+  }
+
+  function buildModelMenu() {
     if (!window.CharacterModels) return;
-    characterPicker.innerHTML = '<p class="picker-label">Commando model</p>';
+    modelMenu.innerHTML = '';
     CharacterModels.list.forEach(function (model) {
       var btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = 'char-card' + (model.id === characterModel ? ' selected' : '');
+      btn.className = 'model-option' + (model.id === characterModel ? ' selected' : '');
       btn.textContent = model.name;
       btn.dataset.char = model.id;
-      btn.addEventListener('click', function () {
-        characterModel = model.id;
-        g.characterModel = characterModel;
-        localStorage.setItem(CHARACTER_KEY, characterModel);
-        buildCharacterPicker();
+      btn.setAttribute('role', 'option');
+      btn.setAttribute('aria-selected', model.id === characterModel ? 'true' : 'false');
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        selectCharacterModel(model.id);
       });
-      characterPicker.appendChild(btn);
+      modelMenu.appendChild(btn);
     });
+  }
+
+  function buildModelPicker() {
+    if (!window.CharacterModels) return;
+    modelBtn.textContent = 'Model · ' + getModelName(characterModel);
+    buildModelMenu();
+    drawModelPreview();
   }
 
   function canvasPoint(evt) {
@@ -222,7 +301,7 @@
   function exitToMenu() {
     state = STATE.MODES;
     syncGRefs();
-    exitBtn.hidden = true;
+    setPlayControlsVisible(false);
     hudAutoshoot.hidden = true;
     Gore.clear();
     showModeSelect();
@@ -342,8 +421,13 @@
     overlaySubtitle.textContent = subtitle;
     startBtn.hidden = !options.showDeploy;
     autoshootBtn.hidden = !options.showDeploy;
-    characterPicker.hidden = !options.showPicker;
+    characterPicker.hidden = true;
+    modelPickerWrap.hidden = !options.showPicker;
     modePicker.hidden = !options.showPicker;
+    if (options.showPicker) {
+      buildModelPicker();
+      closeModelMenu();
+    }
     startBtn.textContent = options.deployLabel || 'Deploy';
 
     var existingBoard = document.getElementById('mock-leaderboard');
@@ -401,7 +485,7 @@
     state = STATE.PLAYING;
     syncGRefs();
     hideOverlay();
-    exitBtn.hidden = false;
+    setPlayControlsVisible(true);
     hudAutoshoot.hidden = false;
     GameAudio.resume();
   }
@@ -424,7 +508,7 @@
         mockLeaderboard: flag('mockLeaderboard')
       }
     );
-    exitBtn.hidden = false;
+    setPlayControlsVisible(true);
     hudAutoshoot.hidden = true;
   }
 
@@ -709,6 +793,9 @@
     mode = resolveMode();
     syncGRefs();
     g.mode = mode;
+    if (state === STATE.MODES || state === STATE.INTRO || state === STATE.GAMEOVER) {
+      drawModelPreview();
+    }
     if (mode.render) {
       mode.render(g, ctx);
       return;
@@ -721,7 +808,7 @@
     lastTime = timestamp;
     try {
       if (state === STATE.PLAYING) {
-        update(dt);
+        update(dt * gameSpeed);
       }
       render();
     } catch (err) {
@@ -752,6 +839,7 @@
   autoshootBtn.addEventListener('click', toggleAutoshoot);
   hudAutoshoot.addEventListener('click', toggleAutoshoot);
   exitBtn.addEventListener('click', exitToMenu);
+  speedBtn.addEventListener('click', toggleSpeed);
 
   canvas.addEventListener('mousemove', function (e) {
     var pt = canvasPoint(e);
@@ -772,8 +860,20 @@
     mouse.down = false;
   });
 
+  modelBtn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    toggleModelMenu();
+  });
+
+  document.addEventListener('click', function (e) {
+    if (!modelPickerWrap.hidden && !e.target.closest('#model-picker-wrap')) {
+      closeModelMenu();
+    }
+  });
+
   overlay.addEventListener('click', function (e) {
-    if (e.target.closest('.mode-card') || e.target.closest('.char-card') ||
+    if (e.target.closest('.mode-card') || e.target.closest('.model-option') ||
+        e.target.closest('#model-picker-wrap') ||
         e.target === startBtn || e.target === autoshootBtn) return;
     if (state === STATE.MODES && !startBtn.hidden) {
       GameAudio.resume().then(startGame);

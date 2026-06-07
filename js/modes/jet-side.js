@@ -4,12 +4,58 @@
 
   var JET_LANES = [130, 270, 410];
 
-  function drawJetPlayer(ctx, p) {
+  function drawJetBlast(ctx, nozzleY, flicker, strong) {
+    var len = strong ? flicker * 1.35 : flicker * 0.65;
+    var grad = ctx.createLinearGradient(-18, nozzleY, -18 - len, nozzleY);
+    grad.addColorStop(0, strong ? '#fff4a3' : '#ffa657');
+    grad.addColorStop(0.25, strong ? '#ff7b72' : '#ff9f43');
+    grad.addColorStop(0.65, 'rgba(255, 100, 40, 0.45)');
+    grad.addColorStop(1, 'rgba(255, 80, 20, 0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.moveTo(-18, nozzleY - 3);
+    ctx.lineTo(-18 - len, nozzleY + 1);
+    ctx.lineTo(-18 - len * 0.55, nozzleY + 5);
+    ctx.lineTo(-18, nozzleY + 3);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = 'rgba(180, 190, 210, 0.12)';
+    ctx.beginPath();
+    ctx.arc(-18 - len * 0.35, nozzleY + 2, 4 + Math.random() * 3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  function drawJetPlayer(ctx, p, animTime) {
     ctx.save();
     ctx.translate(p.x, p.y);
+
+    var laneDelta = Math.abs(p.y - JET_LANES[p.targetLane]);
+    var blasting = p.thrust || laneDelta > 2;
+    var strongBlast = !!p.thrust;
+    var flicker = 22 + Math.sin(animTime * 38) * 7 + Math.random() * 5;
+
+    ctx.strokeStyle = '#6e7681';
+    ctx.fillStyle = '#484f58';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+
+    if (blasting) {
+      drawJetBlast(ctx, 5, flicker, strongBlast);
+      drawJetBlast(ctx, 15, flicker * 0.92, strongBlast);
+    }
+
+    ctx.fillStyle = '#3d444d';
+    ctx.fillRect(-15, -4, 11, 24);
+    ctx.strokeRect(-15, -4, 11, 24);
+    ctx.fillStyle = '#58a6ff';
+    ctx.fillRect(-13, 0, 7, 8);
+    ctx.fillStyle = '#6e7681';
+    ctx.fillRect(-17, 3, 3, 5);
+    ctx.fillRect(-17, 13, 3, 5);
+
     ctx.strokeStyle = '#58a6ff';
     ctx.lineWidth = 2.5;
-    ctx.lineCap = 'round';
     ctx.beginPath();
     ctx.arc(0, -10, 5, 0, Math.PI * 2);
     ctx.stroke();
@@ -17,23 +63,21 @@
     ctx.moveTo(0, -5);
     ctx.lineTo(0, 10);
     ctx.moveTo(0, 0);
-    ctx.lineTo(-8, 6);
+    ctx.lineTo(-7, 8);
     ctx.moveTo(0, 0);
     ctx.lineTo(10, 2);
     ctx.stroke();
     ctx.fillStyle = '#58a6ff';
-    ctx.fillRect(-10, 8, 8, 12);
-    ctx.fillRect(2, 8, 8, 12);
-    if (p.thrust) {
-      ctx.fillStyle = '#ffa657';
-      ctx.beginPath();
-      ctx.moveTo(-8, 20);
-      ctx.lineTo(-4, 32 + Math.random() * 8);
-      ctx.lineTo(0, 20);
-      ctx.lineTo(4, 32 + Math.random() * 8);
-      ctx.lineTo(8, 20);
-      ctx.fill();
-    }
+    ctx.fillRect(10, 0, 8, 3);
+
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(0, 10);
+    ctx.lineTo(-5, 22);
+    ctx.moveTo(0, 10);
+    ctx.lineTo(5, 22);
+    ctx.stroke();
+
     ctx.restore();
   }
 
@@ -183,7 +227,7 @@
     },
 
     renderPlayer: function (g, ctx) {
-      drawJetPlayer(ctx, g.player);
+      drawJetPlayer(ctx, g.player, g.animTime);
     }
   });
 })();

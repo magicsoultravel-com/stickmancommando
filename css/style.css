@@ -220,21 +220,38 @@ body {
   flex-wrap: wrap;
 }
 
-#exit-btn {
+#play-controls {
   position: absolute;
   top: 52px;
   right: 10px;
   z-index: 20;
+  display: flex;
+  gap: 8px;
+}
+
+#speed-btn,
+#exit-btn {
   width: 36px;
   height: 36px;
   border: 1px solid #484f58;
   border-radius: 8px;
   background: rgba(22, 27, 34, 0.92);
   color: #e6edf3;
-  font-size: 1.4rem;
+  font-size: 0.82rem;
+  font-weight: 700;
   line-height: 1;
   cursor: pointer;
   transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+#exit-btn {
+  font-size: 1.4rem;
+}
+
+#speed-btn:hover {
+  background: rgba(88, 166, 255, 0.18);
+  border-color: #58a6ff;
+  color: #79c0ff;
 }
 
 #exit-btn:hover {
@@ -279,12 +296,89 @@ body {
   margin-bottom: 8px;
 }
 
-#character-picker {
+#model-picker-wrap {
   display: flex;
+  flex-direction: column;
+  align-items: center;
   gap: 8px;
-  justify-content: center;
-  flex-wrap: wrap;
-  margin-bottom: 16px;
+  margin: 14px auto 16px;
+}
+
+#model-preview {
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 10px;
+  image-rendering: pixelated;
+}
+
+.model-picker-anchor {
+  position: relative;
+}
+
+#model-btn {
+  padding: 8px 18px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #c9d1d9;
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+#model-btn:hover,
+#model-btn.open {
+  border-color: #58a6ff;
+  color: #58a6ff;
+  background: rgba(88, 166, 255, 0.06);
+}
+
+.model-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 148px;
+  padding: 6px;
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  z-index: 30;
+}
+
+.model-menu[hidden] {
+  display: none;
+}
+
+.model-option {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-align: left;
+  color: #8b949e;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.model-option:hover {
+  background: rgba(88, 166, 255, 0.08);
+  color: #c9d1d9;
+}
+
+.model-option.selected {
+  color: #58a6ff;
+  background: rgba(88, 166, 255, 0.12);
+}
+
+#character-picker {
+  display: none;
 }
 
 .char-card {

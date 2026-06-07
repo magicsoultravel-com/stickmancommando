@@ -3,20 +3,35 @@
   var S = window.GameShared;
 
   function roadProfile(t) {
-    return Math.sin(t * 0.007) * 55 +
-      Math.sin(t * 0.019) * 28 +
-      Math.sin(t * 0.003) * 90 +
-      Math.sin(t * 0.0012) * 120;
+    var wave = Math.sin(t * 0.007) * 45 +
+      Math.sin(t * 0.019) * 30 +
+      Math.sin(t * 0.003) * 75;
+    var serpentine = Math.sin(t * 0.028) * 55 + Math.sin(t * 0.061) * 28;
+    var crest = Math.sin(t * 0.009);
+    var jump = crest > 0.88 ? Math.pow((crest - 0.88) / 0.12, 2) * 140 : 0;
+    var ravine = crest < -0.82 ? Math.pow((-0.82 - crest) / 0.18, 1.6) * 110 : 0;
+    var hairpin = Math.sin(t * 0.0045) * Math.sin(t * 0.017) * 65;
+    return wave + serpentine + hairpin + jump - ravine;
   }
 
   function roadSlope(t) {
-    return (roadProfile(t + 8) - roadProfile(t - 8)) / 16;
+    return (roadProfile(t + 6) - roadProfile(t - 6)) / 12;
+  }
+
+  function roadCurvature(t) {
+    return (roadSlope(t + 10) - roadSlope(t - 10)) / 20;
+  }
+
+  function ravineDepth(t) {
+    var crest = Math.sin(t * 0.009);
+    if (crest >= -0.82) return 0;
+    return Math.pow((-0.82 - crest) / 0.18, 1.4);
   }
 
   function createTruck(g) {
     return {
       roadT: 0,
-      speed: 320,
+      speed: 380,
       bumpY: 0,
       bumpVel: 0,
       pitch: 0,
@@ -24,8 +39,18 @@
       inertiaX: 0,
       inertiaY: 0,
       bedCX: g.canvas.width / 2,
-      bedCY: g.canvas.height - 98
+      bedCY: g.canvas.height - 98,
+      airborne: false,
+      airTime: 0,
+      lastImpact: 0,
+      fx: []
     };
+  }
+
+  function spawnRoadExplosion(g, x, y, size) {
+    S.spawnExplosion(g, x, y, '#ffa657', size || 1);
+    S.spawnExplosion(g, x, y, '#ff7b72', (size || 1) * 0.7);
+    S.spawnExplosion(g, x + (Math.random() - 0.5) * 40, y + (Math.random() - 0.5) * 20, '#e3b341', (size || 1) * 0.5);
   }
 
   function drawDrone(ctx, x, y, scale, color) {
@@ -99,65 +124,108 @@
     var truck = g.truck;
     var bump = truck.bumpY;
     var roll = truck.roll || 0;
+    var pitch = truck.pitch || 0;
     var cx = g.canvas.width / 2;
+    var ravine = ravineDepth(truck.roadT);
 
     var sky = ctx.createLinearGradient(0, 0, 0, g.canvas.height);
-    sky.addColorStop(0, '#050810');
-    sky.addColorStop(0.45, '#1a2030');
-    sky.addColorStop(1, '#2a1810');
+    sky.addColorStop(0, '#020408');
+    sky.addColorStop(0.35, '#141c28');
+    sky.addColorStop(0.7, '#2a1810');
+    sky.addColorStop(1, '#1a0a08');
     ctx.fillStyle = sky;
     ctx.fillRect(0, 0, g.canvas.width, g.canvas.height);
 
     ctx.save();
-    ctx.translate(cx, g.canvas.height * 0.42 + bump * 0.5);
-    ctx.rotate(roll * 0.15);
+    ctx.translate(cx, g.canvas.height * 0.38 + bump * 0.65);
+    ctx.rotate(roll * 0.28 + pitch * 0.08);
 
-    ctx.fillStyle = '#1f2937';
-    for (var m = -3; m < 4; m++) {
-      var mx = m * 200 - (truck.roadT * 0.2) % 200;
+    ctx.fillStyle = '#111820';
+    for (var m = -4; m < 5; m++) {
+      var mx = m * 180 - (truck.roadT * 0.35) % 180;
+      var peak = 50 + Math.sin(truck.roadT * 0.01 + m) * 30;
       ctx.beginPath();
-      ctx.moveTo(mx, 60);
-      ctx.lineTo(mx + 60, -40);
-      ctx.lineTo(mx + 120, 60);
+      ctx.moveTo(mx, 70);
+      ctx.lineTo(mx + 50, -peak);
+      ctx.lineTo(mx + 110, 70);
       ctx.fill();
     }
 
-    var horizonY = 80 + bump * 0.2;
-    ctx.fillStyle = '#3a2a20';
+    var horizonY = 70 + bump * 0.35 + pitch * 18;
+    var roadTilt = roll * 0.22;
+
+    ctx.save();
+    ctx.rotate(roadTilt);
+
+    ctx.fillStyle = ravine > 0.35 ? '#120605' : '#3a2a20';
     ctx.beginPath();
-    ctx.moveTo(-cx, horizonY);
-    ctx.lineTo(cx, horizonY);
-    ctx.lineTo(cx + 200, g.canvas.height);
-    ctx.lineTo(-cx - 200, g.canvas.height);
+    ctx.moveTo(-cx - 300, horizonY);
+    ctx.lineTo(cx + 300, horizonY);
+    ctx.lineTo(cx + 350, g.canvas.height);
+    ctx.lineTo(-cx - 350, g.canvas.height);
     ctx.closePath();
     ctx.fill();
 
-    ctx.fillStyle = '#2a2018';
+    if (ravine > 0.2) {
+      var glow = ctx.createLinearGradient(0, horizonY + 20, 0, horizonY + 180);
+      glow.addColorStop(0, 'rgba(255, 90, 30, 0.55)');
+      glow.addColorStop(0.5, 'rgba(180, 40, 10, 0.35)');
+      glow.addColorStop(1, 'rgba(40, 10, 5, 0)');
+      ctx.fillStyle = glow;
+      ctx.fillRect(-cx, horizonY + 10, cx * 2, 200 * ravine);
+
+      ctx.strokeStyle = 'rgba(255, 140, 60, 0.4)';
+      ctx.lineWidth = 2;
+      for (var ri = 0; ri < 6; ri++) {
+        var rx = -60 + ri * 24 + (truck.roadT * 3) % 24;
+        ctx.beginPath();
+        ctx.moveTo(rx, horizonY + 40 + ri * 8);
+        ctx.lineTo(rx + 8, horizonY + 90 + ri * 14);
+        ctx.stroke();
+      }
+    }
+
+    ctx.fillStyle = '#241810';
     ctx.beginPath();
-    ctx.moveTo(-cx, horizonY);
-    ctx.lineTo(cx, horizonY);
+    ctx.moveTo(-cx - 300, horizonY);
+    ctx.lineTo(cx + 300, horizonY);
     ctx.lineTo(cx, g.canvas.height);
     ctx.lineTo(-cx, g.canvas.height);
     ctx.closePath();
     ctx.fill();
 
-    ctx.strokeStyle = 'rgba(255, 220, 120, 0.45)';
-    ctx.lineWidth = 3;
-    var stripeOffset = (truck.roadT * 2.2) % 80;
-    for (var s = 0; s < 16; s++) {
-      var sy = horizonY + 30 + s * 55 + stripeOffset;
+    ctx.strokeStyle = ravine > 0.45 ? 'rgba(255, 180, 80, 0.15)' : 'rgba(255, 220, 120, 0.5)';
+    ctx.lineWidth = ravine > 0.45 ? 1 : 3;
+    var stripeOffset = (truck.roadT * 3.4) % 70;
+    for (var s = 0; s < 18; s++) {
+      var sy = horizonY + 24 + s * 48 + stripeOffset;
+      if (ravine > 0.5 && s % 5 === 2) continue;
       var t = (sy - horizonY) / (g.canvas.height - horizonY);
-      var halfW = 8 + t * cx * 0.85;
+      var halfW = 6 + t * cx * 0.9;
       ctx.beginPath();
       ctx.moveTo(-halfW, sy);
       ctx.lineTo(halfW, sy);
       ctx.stroke();
     }
     ctx.restore();
+    ctx.restore();
 
-    var bedY = truck.bedCY + bump * 0.5;
+    for (var fi = 0; fi < truck.fx.length; fi++) {
+      var fx = truck.fx[fi];
+      var alpha = fx.life / fx.maxLife;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = fx.color;
+      ctx.beginPath();
+      ctx.arc(fx.x, fx.y, fx.radius * (1 + (1 - alpha) * 0.8), 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    var bedY = truck.bedCY + bump * 0.65 + pitch * 12;
     ctx.save();
-    ctx.translate(cx + roll * 40, bedY);
+    ctx.translate(cx + roll * 55, bedY);
+    ctx.rotate(roll * 0.18);
     ctx.fillStyle = '#1a1f26';
     ctx.fillRect(-180, 0, 360, 120);
     ctx.fillStyle = '#3d444d';
@@ -169,6 +237,17 @@
     ctx.strokeRect(-145, -48, 290, 55);
     ctx.fillStyle = '#484f58';
     ctx.fillRect(-50, -95, 100, 45);
+
+    if (truck.airborne) {
+      ctx.strokeStyle = 'rgba(255, 160, 60, 0.35)';
+      ctx.lineWidth = 3;
+      ctx.setLineDash([6, 8]);
+      ctx.beginPath();
+      ctx.moveTo(-160, 72);
+      ctx.lineTo(160, 72);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
     ctx.restore();
   }
 
@@ -182,8 +261,8 @@
 
     reset: function (g) {
       g.truck = createTruck(g);
-      g.spawnInterval = 1.6;
-      g.maxEnemies = 10;
+      g.spawnInterval = 1.4;
+      g.maxEnemies = 12;
     },
 
     createPlayer: function (g) {
@@ -216,34 +295,71 @@
         g.spawnTimer = 0;
         var x = 80 + Math.random() * (g.canvas.width - 160);
         S.spawnEnemyAt(g, x, -30, 'drone', {
-          speed: 85 + Math.random() * 40,
+          speed: 95 + Math.random() * 50,
           z: 0.2 + Math.random() * 0.5
         });
-        if (g.score > 80 && Math.random() < 0.4) {
+        if (g.score > 60 && Math.random() < 0.5) {
           x = 80 + Math.random() * (g.canvas.width - 160);
           S.spawnEnemyAt(g, x, -30, 'drone', {
-            speed: 85 + Math.random() * 40,
+            speed: 95 + Math.random() * 50,
             z: 0.2 + Math.random() * 0.5
           });
         }
       }
-      g.spawnInterval = Math.max(0.9, 1.7 - g.score * 0.004);
+      g.spawnInterval = Math.max(0.75, 1.5 - g.score * 0.004);
+
+      if (Math.random() < dt * 0.12) {
+        var side = Math.random() < 0.5 ? -1 : 1;
+        spawnRoadExplosion(g,
+          g.canvas.width / 2 + side * (120 + Math.random() * 180),
+          g.canvas.height * 0.35 + Math.random() * 80,
+          0.6 + Math.random() * 0.5);
+      }
     },
 
     move: function (g, dt) {
       var truck = g.truck;
       truck.roadT += truck.speed * dt;
-      var targetBump = roadProfile(truck.roadT) * 0.55;
-      truck.bumpVel += (targetBump - truck.bumpY) * 8 * dt;
-      truck.bumpVel *= 0.88;
-      truck.bumpY += truck.bumpVel * dt;
-      truck.pitch = roadSlope(truck.roadT) * 0.85;
-      truck.roll = Math.sin(truck.roadT * 0.011) * 0.12 + truck.bumpVel * 0.008;
 
-      truck.inertiaX += truck.bumpVel * 0.06 + truck.roll * 40 * dt;
-      truck.inertiaY += truck.pitch * 32 * dt;
-      truck.inertiaX *= 0.86;
-      truck.inertiaY *= 0.86;
+      var targetBump = roadProfile(truck.roadT) * 0.72;
+      var prevVel = truck.bumpVel;
+      truck.bumpVel += (targetBump - truck.bumpY) * 11 * dt;
+      truck.bumpVel *= 0.84;
+      truck.bumpY += truck.bumpVel * dt;
+
+      truck.pitch = roadSlope(truck.roadT) * 1.15;
+      var curve = roadCurvature(truck.roadT);
+      truck.roll = Math.sin(truck.roadT * 0.014) * 0.22 + curve * 2.2 + truck.bumpVel * 0.012;
+
+      var wasAirborne = truck.airborne;
+      truck.airborne = truck.bumpY < -35 || Math.abs(truck.bumpVel) > 95;
+      if (truck.airborne) truck.airTime += dt;
+      else truck.airTime = 0;
+
+      if (wasAirborne && !truck.airborne && truck.bumpVel > 40) {
+        spawnRoadExplosion(g, g.canvas.width / 2 + truck.roll * 40, g.canvas.height - 40, 1.4);
+        g.shakeTimer = Math.max(g.shakeTimer, 0.45);
+        truck.lastImpact = g.animTime;
+      }
+
+      if (Math.abs(truck.bumpVel - prevVel) > 120 * dt && g.animTime - truck.lastImpact > 0.25) {
+        spawnRoadExplosion(g,
+          g.canvas.width / 2 + (Math.random() - 0.5) * 200,
+          g.canvas.height * 0.55 + Math.random() * 60,
+          0.9);
+        g.shakeTimer = Math.max(g.shakeTimer, 0.3);
+        truck.lastImpact = g.animTime;
+      }
+
+      if (ravineDepth(truck.roadT) > 0.55 && Math.random() < dt * 2.5) {
+        spawnRoadExplosion(g, g.canvas.width / 2 + (Math.random() - 0.5) * 80, g.canvas.height * 0.42, 1.1);
+        g.shakeTimer = Math.max(g.shakeTimer, 0.35);
+      }
+
+      truck.inertiaX += truck.bumpVel * 0.09 + truck.roll * 55 * dt + curve * 80 * dt;
+      truck.inertiaY += truck.pitch * 42 * dt;
+      truck.inertiaX *= 0.82;
+      truck.inertiaY *= 0.82;
 
       var moveX = 0;
       var moveY = 0;
@@ -268,10 +384,25 @@
       g.player.offsetX = Math.max(-85, Math.min(85, g.player.offsetX));
       g.player.offsetY = Math.max(-35, Math.min(35, g.player.offsetY));
 
-      g.player.x = truck.bedCX + g.player.offsetX + truck.inertiaX + truck.bumpY * 0.22 + truck.roll * 30;
-      g.player.y = truck.bedCY + g.player.offsetY + truck.inertiaY + truck.bumpY * 0.55;
+      g.player.x = truck.bedCX + g.player.offsetX + truck.inertiaX + truck.bumpY * 0.28 + truck.roll * 38;
+      g.player.y = truck.bedCY + g.player.offsetY + truck.inertiaY + truck.bumpY * 0.62;
+
+      for (var fi = truck.fx.length - 1; fi >= 0; fi--) {
+        truck.fx[fi].life -= dt;
+        truck.fx[fi].radius += dt * 90;
+        if (truck.fx[fi].life <= 0) truck.fx.splice(fi, 1);
+      }
+
       g.player.aimX = 0;
       g.player.aimY = -1;
+    },
+
+    onKill: function (g, enemy) {
+      if (enemy.isDrone) {
+        S.spawnExplosion(g, enemy.x, enemy.y, '#ff7b72', 1.2);
+        S.spawnExplosion(g, enemy.x, enemy.y, '#ffa657', 0.8);
+        g.shakeTimer = Math.max(g.shakeTimer, 0.15);
+      }
     },
 
     getShootVector: function () {
@@ -292,22 +423,23 @@
 
     updateEnemy: function (g, dt, enemy, index) {
       if (!enemy.isDrone || !g.truck) return;
-      enemy.weave += dt * 3;
-      enemy.z = Math.min(1, enemy.z + dt * 0.35);
-      var targetX = g.player.x + Math.sin(enemy.weave) * 40;
+      enemy.weave += dt * 3.5;
+      enemy.z = Math.min(1, enemy.z + dt * 0.4);
+      var targetX = g.player.x + Math.sin(enemy.weave) * 50;
       var targetY = g.truck.bedCY - 20;
       var dx = targetX - enemy.x;
       var dy = targetY - enemy.y;
       var dlen = Math.hypot(dx, dy) || 1;
-      var approach = enemy.speed * (0.5 + enemy.z * 0.8);
+      var approach = enemy.speed * (0.55 + enemy.z * 0.85);
       enemy.x += (dx / dlen) * approach * dt;
       enemy.y += (dy / dlen) * approach * dt;
       enemy.scale = 0.55 + enemy.z * 0.45;
 
       if (enemy.y > g.truck.bedCY - 30) {
         g.hurtPlayer(15);
+        S.spawnExplosion(g, enemy.x, enemy.y, '#ff7b72', 1.3);
         g.enemies.splice(index, 1);
-        S.spawnParticles(g, enemy.x, enemy.y, '#ff7b72', 10);
+        g.shakeTimer = Math.max(g.shakeTimer, 0.25);
         return 'removed';
       }
       return 'skipContact';
@@ -327,9 +459,17 @@
     },
 
     drawHud: function (g, ctx) {
+      var truck = g.truck;
       ctx.fillStyle = 'rgba(139, 148, 158, 0.9)';
       ctx.font = '600 12px Segoe UI, system-ui, sans-serif';
       ctx.fillText('Drone Drive — aim from the truck bed', 16, 24);
+      if (truck.airborne) {
+        ctx.fillStyle = 'rgba(255, 160, 60, 0.95)';
+        ctx.fillText('AIRBORNE!', 16, 42);
+      } else if (ravineDepth(truck.roadT) > 0.45) {
+        ctx.fillStyle = 'rgba(255, 100, 60, 0.95)';
+        ctx.fillText('RAVINE!', 16, 42);
+      }
     },
 
     bulletColor: function () {

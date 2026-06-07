@@ -2,8 +2,8 @@
   'use strict';
 
   var ENEMY_TYPES = {
-    walker: { color: '#7d9a6a', speed: 32, health: 1, radius: 11, scale: 1, score: 5, zombie: true },
-    brute: { color: '#4a3355', speed: 22, health: 10, radius: 18, scale: 1.45, score: 100, zombie: true, isBrute: true },
+    walker: { color: '#7d9a6a', speed: 42, health: 1, radius: 11, scale: 1, score: 5, zombie: true },
+    brute: { color: '#3d2a40', speed: 20, health: 10, radius: 22, scale: 1.75, score: 100, zombie: true, isBrute: true },
     grunt: { color: '#f85149', speed: 55, health: 1, radius: 12, scale: 1, score: 10 },
     runner: { color: '#ffa657', speed: 110, health: 1, radius: 10, scale: 0.9, score: 15 },
     tank: { color: '#bc8cff', speed: 35, health: 3, radius: 16, scale: 1.3, score: 30 },
@@ -43,7 +43,8 @@
       isBrute: !!type.isBrute,
       weave: Math.random() * Math.PI * 2,
       z: extra.z || 0,
-      animPhase: Math.random() * 10
+      animPhase: Math.random() * 10,
+      laneY: type.zombie ? snapGrid(y, g.ZOMBIE_GRID) : undefined
     });
   }
 
@@ -157,23 +158,72 @@
   }
 
   function chaseEnemy(g, dt, enemy) {
+    if (enemy.isZombie) {
+      chaseZombie(g, dt, enemy);
+      return;
+    }
     var ex = g.player.x - enemy.x;
     var ey = g.player.y - enemy.y;
-    if (enemy.isZombie) {
-      enemy.shamble += dt * 4;
-      ex += Math.sin(enemy.shamble) * 18;
-      ey += Math.cos(enemy.shamble * 0.7) * 12;
-    }
     var elen = Math.hypot(ex, ey) || 1;
     enemy.x += (ex / elen) * enemy.speed * dt;
     enemy.y += (ey / elen) * enemy.speed * dt;
-    if (enemy.isZombie) {
-      enemy.y += (snapGrid(enemy.y, g.ZOMBIE_GRID) - enemy.y) * 2.8 * dt;
+  }
+
+  function chaseZombie(g, dt, enemy) {
+    var grid = g.ZOMBIE_GRID;
+    if (enemy.laneY == null) enemy.laneY = snapGrid(enemy.y, grid);
+
+    enemy.shamble += dt * (enemy.isBrute ? 3 : 5);
+
+    var targetLane = snapGrid(g.player.y, grid);
+    targetLane = Math.max(grid, Math.min(g.canvas.height - grid, targetLane));
+    var laneDiff = targetLane - enemy.laneY;
+
+    if (Math.abs(laneDiff) > 1) {
+      var laneSpeed = enemy.speed * (enemy.isBrute ? 0.45 : 0.85);
+      var laneStep = laneSpeed * dt;
+      if (Math.abs(laneDiff) <= laneStep) {
+        enemy.laneY = targetLane;
+      } else {
+        enemy.laneY += Math.sign(laneDiff) * laneStep;
+      }
     }
+
+    var dx = g.player.x - enemy.x;
+    var xDir = Math.abs(dx) < 2 ? 0 : Math.sign(dx);
+    if (xDir !== 0) {
+      enemy.x += xDir * enemy.speed * dt;
+    }
+
+    var wobbleY = Math.sin(enemy.shamble) * (enemy.isBrute ? 1.5 : 3);
+    enemy.y = enemy.laneY + wobbleY;
+
+    var sepX = 0;
+    for (var i = 0; i < g.enemies.length; i++) {
+      var other = g.enemies[i];
+      if (other === enemy || !other.isZombie) continue;
+      var ox = enemy.x - other.x;
+      var oy = enemy.y - other.y;
+      if (Math.abs(oy) > grid * 0.6) continue;
+      var od = Math.abs(ox);
+      var minDist = enemy.radius + other.radius + 8;
+      if (od > 0 && od < minDist) {
+        sepX += Math.sign(ox) * (minDist - od) / minDist;
+      }
+    }
+    enemy.x += sepX * enemy.speed * 0.4 * dt;
+
+    enemy.x = Math.max(-20, Math.min(g.canvas.width + 20, enemy.x));
+    enemy.laneY = Math.max(grid, Math.min(g.canvas.height - grid, enemy.laneY));
+    enemy.y = enemy.laneY + wobbleY;
   }
 
   function drawStickmanUpright(ctx, x, y, faceX, faceY, color, scale, options) {
     options = options || {};
+    if (options.brute) {
+      drawBruteZombie(ctx, x, y, faceX, faceY, color, scale, options);
+      return;
+    }
     ctx.save();
     ctx.translate(x, y);
     ctx.scale(scale, scale);
@@ -227,6 +277,103 @@
     ctx.restore();
   }
 
+  function drawBruteZombie(ctx, x, y, faceX, faceY, color, scale, options) {
+    options = options || {};
+    var legSwing = options.legSwing || 0;
+    var pulse = Math.sin(Date.now() * 0.004) * 0.04;
+
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(scale * (1 + pulse), scale * (1 + pulse));
+    var flip = faceX < 0 ? -1 : 1;
+    ctx.scale(flip, 1);
+    var lean = Math.max(-0.25, Math.min(0.25, faceY * 0.2));
+    ctx.rotate(lean);
+
+    ctx.strokeStyle = color || '#3d2a40';
+    ctx.fillStyle = 'rgba(45, 30, 48, 0.55)';
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    ctx.beginPath();
+    ctx.ellipse(0, 8, 16, 20, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(-14, 2);
+    ctx.quadraticCurveTo(0, 18, 14, 2);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(0, -18, 6, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(20, 10, 22, 0.7)';
+    ctx.fill();
+
+    ctx.fillStyle = '#ff3b30';
+    ctx.beginPath();
+    ctx.arc(-3, -19, 2.2, 0, Math.PI * 2);
+    ctx.arc(3, -19, 2.2, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = color || '#3d2a40';
+    ctx.lineWidth = 3.5;
+    ctx.beginPath();
+    ctx.moveTo(-3, -14);
+    ctx.lineTo(-2, -10);
+    ctx.moveTo(3, -14);
+    ctx.lineTo(2, -10);
+    ctx.stroke();
+
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(0, -12);
+    ctx.lineTo(0, -2);
+    ctx.stroke();
+
+    ctx.lineWidth = 3.5;
+    ctx.beginPath();
+    ctx.moveTo(0, -4);
+    ctx.lineTo(-18, -8);
+    ctx.moveTo(0, -2);
+    ctx.lineTo(-20, 4);
+    ctx.moveTo(0, 0);
+    ctx.lineTo(18, -6);
+    ctx.moveTo(0, 2);
+    ctx.lineTo(20, 2);
+    ctx.stroke();
+
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(-8, 22);
+    ctx.lineTo(-12 + legSwing, 38);
+    ctx.moveTo(8, 22);
+    ctx.lineTo(12 - legSwing, 38);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  function spawnExplosion(g, x, y, color, size) {
+    size = size || 1;
+    var count = Math.floor(14 * size);
+    for (var i = 0; i < count; i++) {
+      var angle = Math.random() * Math.PI * 2;
+      var speed = (60 + Math.random() * 180) * size;
+      g.particles.push({
+        x: x,
+        y: y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: (0.35 + Math.random() * 0.45) * size,
+        color: color,
+        size: 2 + Math.random() * 3 * size
+      });
+    }
+  }
+
   function drawGridBackground(ctx, canvas, grid, tint) {
     ctx.fillStyle = tint || '#1a2332';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -278,10 +425,10 @@
   function drawParticles(ctx, particles) {
     for (var i = 0; i < particles.length; i++) {
       var p = particles[i];
-      ctx.globalAlpha = p.life * 3;
+      ctx.globalAlpha = Math.min(1, p.life * 3);
       ctx.fillStyle = p.color;
       ctx.beginPath();
-      ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, p.size || 2, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.globalAlpha = 1;
@@ -312,7 +459,10 @@
     drawBullets: drawBullets,
     moveTopDown: moveTopDown,
     chaseEnemy: chaseEnemy,
+    chaseZombie: chaseZombie,
     drawStickmanUpright: drawStickmanUpright,
+    drawBruteZombie: drawBruteZombie,
+    spawnExplosion: spawnExplosion,
     drawGridBackground: drawGridBackground,
     drawZombieGrid: drawZombieGrid
   };

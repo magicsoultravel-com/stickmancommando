@@ -32,15 +32,24 @@
 
     <canvas id="game" width="960" height="540"></canvas>
     <div id="wave-banner" class="wave-banner"></div>
-    <button id="exit-btn" type="button" hidden aria-label="Exit to menu">×</button>
+    <div id="play-controls" hidden>
+      <button id="speed-btn" type="button" aria-label="Game speed">1×</button>
+      <button id="exit-btn" type="button" aria-label="Exit to menu">×</button>
+    </div>
 
     <div id="overlay">
       <div id="overlay-content">
         <h2 id="overlay-title">Stickman Commando</h2>
         <p id="overlay-subtitle"></p>
         <p id="overlay-hint">↑ ↓ ← → move &nbsp;·&nbsp; SPACE shoot &nbsp;·&nbsp; mouse aim</p>
-        <div id="character-picker" hidden></div>
         <div id="mode-picker" hidden></div>
+        <div id="model-picker-wrap" hidden>
+          <canvas id="model-preview" width="72" height="72" aria-hidden="true"></canvas>
+          <div class="model-picker-anchor">
+            <button id="model-btn" type="button" aria-haspopup="listbox" aria-expanded="false">Model · Classic</button>
+            <div id="model-menu" class="model-menu" role="listbox" hidden></div>
+          </div>
+        </div>
         <div id="overlay-actions">
           <button id="start-btn" type="button" hidden>Deploy</button>
           <button id="autoshoot-btn" type="button" class="toggle-btn">Auto: OFF</button>

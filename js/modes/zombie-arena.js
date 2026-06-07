@@ -2,9 +2,9 @@
   'use strict';
   var S = window.GameShared;
 
-  function spawnWalker(g) {
+  function spawnWalker(g, edgeOverride) {
     var margin = 40;
-    var edge = Math.floor(Math.random() * 4);
+    var edge = edgeOverride != null ? edgeOverride : Math.floor(Math.random() * 4);
     var x;
     var y;
     if (edge === 0) { x = Math.random() * g.canvas.width; y = -margin; }
@@ -44,9 +44,10 @@
     flags: { gore: true, mouseMove: true, topDown: true },
 
     reset: function (g) {
-      g.spawnInterval = 0.35;
-      g.maxEnemies = 50;
+      g.spawnInterval = 0.22;
+      g.maxEnemies = 55;
       g.zombieKillCount = 0;
+      g.spawnEdge = Math.floor(Math.random() * 4);
     },
 
     createPlayer: function (g) {
@@ -57,13 +58,15 @@
       g.spawnTimer += dt;
       if (g.spawnTimer >= g.spawnInterval && g.enemies.length < g.maxEnemies) {
         g.spawnTimer = 0;
-        var n = 2 + Math.floor(Math.random() * 2);
-        for (var i = 0; i < n; i++) spawnWalker(g);
+        if (Math.random() < 0.55) g.spawnEdge = Math.floor(Math.random() * 4);
+        var n = 3 + Math.floor(Math.random() * 3);
+        for (var i = 0; i < n; i++) spawnWalker(g, g.spawnEdge);
       }
       g.difficultyTimer += dt;
-      if (g.difficultyTimer > 20) {
+      if (g.difficultyTimer > 18) {
         g.difficultyTimer = 0;
-        g.spawnInterval = Math.max(0.22, g.spawnInterval - 0.03);
+        g.spawnInterval = Math.max(0.14, g.spawnInterval - 0.025);
+        g.maxEnemies = Math.min(65, g.maxEnemies + 2);
       }
     },
 
