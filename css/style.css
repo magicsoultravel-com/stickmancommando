@@ -142,16 +142,38 @@ body {
 
 #overlay-body {
   flex: 1;
+  min-height: 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 16px 20px 8px;
+  padding: 10px 16px 6px;
   text-align: center;
   width: 100%;
   max-width: 860px;
   margin: 0 auto;
+}
+
+#overlay-body.picking-modes {
+  justify-content: flex-start;
+  padding-top: 8px;
+}
+
+#overlay-body.picking-modes #overlay-title {
+  font-size: 1.25rem;
+  margin-bottom: 4px;
+}
+
+#overlay-body.picking-modes #overlay-subtitle,
+#overlay-body.picking-modes #overlay-hint {
+  display: none;
+}
+
+#overlay-body.picking-modes #mode-picker {
+  flex: 1;
+  min-height: 0;
+  align-content: start;
 }
 
 #overlay-title {
@@ -177,8 +199,8 @@ body {
 
 #mode-picker {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 5px;
   width: 100%;
   max-width: 820px;
   margin: 0 auto;
@@ -214,17 +236,18 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 6px;
-  padding: 10px 12px;
+  gap: 4px;
+  padding: 7px 8px;
 }
 
 .mode-card h3 {
-  font-size: 0.72rem;
+  font-size: 0.62rem;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
   color: #58a6ff;
   margin: 0;
   flex: 1;
+  line-height: 1.2;
 }
 
 .mode-chevron {

@@ -6,6 +6,7 @@
   var canvas = document.getElementById('game');
   var ctx = canvas.getContext('2d');
   var overlay = document.getElementById('overlay');
+  var overlayBody = document.getElementById('overlay-body');
   var overlayTitle = document.getElementById('overlay-title');
   var overlaySubtitle = document.getElementById('overlay-subtitle');
   var overlayHint = document.getElementById('overlay-hint');
@@ -432,6 +433,7 @@
     autoshootBtn.hidden = !options.showDeploy;
     modelBtn.hidden = !options.showDeploy;
     modePicker.hidden = !options.showPicker;
+    if (overlayBody) overlayBody.classList.toggle('picking-modes', !!options.showPicker);
     if (options.showDeploy) syncModelBtn();
     closeModelModal();
     startBtn.textContent = options.deployLabel || 'Deploy';
