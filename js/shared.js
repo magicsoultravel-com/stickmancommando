@@ -3,7 +3,7 @@
 
   var ENEMY_TYPES = {
     walker: { color: '#7d9a6a', speed: 42, health: 1, radius: 11, scale: 1, score: 5, zombie: true },
-    brute: { color: '#3d2a40', speed: 20, health: 10, radius: 22, scale: 1.75, score: 100, zombie: true, isBrute: true },
+    brute: { color: '#4a3548', speed: 18, health: 10, radius: 26, scale: 2.05, score: 100, zombie: true, isBrute: true },
     grunt: { color: '#f85149', speed: 55, health: 1, radius: 12, scale: 1, score: 10 },
     runner: { color: '#ffa657', speed: 110, health: 1, radius: 10, scale: 0.9, score: 15 },
     tank: { color: '#bc8cff', speed: 35, health: 3, radius: 16, scale: 1.3, score: 30 },
@@ -280,77 +280,97 @@
   function drawBruteZombie(ctx, x, y, faceX, faceY, color, scale, options) {
     options = options || {};
     var legSwing = options.legSwing || 0;
-    var pulse = Math.sin(Date.now() * 0.004) * 0.04;
+    var pulse = Math.sin(Date.now() * 0.003) * 0.05;
+    var sway = Math.sin(Date.now() * 0.002) * 2;
 
     ctx.save();
-    ctx.translate(x, y);
-    ctx.scale(scale * (1 + pulse), scale * (1 + pulse));
+    ctx.translate(x + sway, y);
+    ctx.scale(scale * (1 + pulse), scale * (1.08 + pulse * 0.5));
     var flip = faceX < 0 ? -1 : 1;
     ctx.scale(flip, 1);
-    var lean = Math.max(-0.25, Math.min(0.25, faceY * 0.2));
+    var lean = Math.max(-0.2, Math.min(0.2, faceY * 0.15));
     ctx.rotate(lean);
 
-    ctx.strokeStyle = color || '#3d2a40';
-    ctx.fillStyle = 'rgba(45, 30, 48, 0.55)';
-    ctx.lineWidth = 4;
+    var bodyColor = color || '#4a3548';
+    ctx.strokeStyle = bodyColor;
+    ctx.fillStyle = 'rgba(35, 22, 38, 0.75)';
+    ctx.lineWidth = 5;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
     ctx.beginPath();
-    ctx.ellipse(0, 8, 16, 20, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, 10, 20, 24, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
 
     ctx.beginPath();
-    ctx.moveTo(-14, 2);
-    ctx.quadraticCurveTo(0, 18, 14, 2);
+    ctx.moveTo(-18, 4);
+    ctx.quadraticCurveTo(0, 24, 18, 4);
+    ctx.stroke();
+
+    ctx.fillStyle = 'rgba(255, 40, 30, 0.35)';
+    ctx.beginPath();
+    ctx.ellipse(0, 14, 10, 6, 0, 0, Math.PI);
+    ctx.fill();
+
+    ctx.strokeStyle = bodyColor;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(-16, -2);
+    ctx.quadraticCurveTo(-22, 6, -14, 12);
+    ctx.moveTo(16, -2);
+    ctx.quadraticCurveTo(22, 6, 14, 12);
     ctx.stroke();
 
     ctx.beginPath();
-    ctx.arc(0, -18, 6, 0, Math.PI * 2);
+    ctx.arc(0, -20, 5.5, 0, Math.PI * 2);
     ctx.stroke();
-    ctx.fillStyle = 'rgba(20, 10, 22, 0.7)';
+    ctx.fillStyle = 'rgba(12, 6, 14, 0.85)';
     ctx.fill();
 
-    ctx.fillStyle = '#ff3b30';
+    ctx.fillStyle = '#ff2d20';
     ctx.beginPath();
-    ctx.arc(-3, -19, 2.2, 0, Math.PI * 2);
-    ctx.arc(3, -19, 2.2, 0, Math.PI * 2);
+    ctx.arc(-2.5, -21, 2.5, 0, Math.PI * 2);
+    ctx.arc(2.5, -21, 2.5, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.strokeStyle = color || '#3d2a40';
+    ctx.strokeStyle = '#1a0a0a';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(0, -16, 4, 0.1 * Math.PI, 0.9 * Math.PI);
+    ctx.stroke();
+    ctx.fillStyle = '#8b0000';
+    ctx.beginPath();
+    ctx.moveTo(-3, -15);
+    ctx.lineTo(0, -12);
+    ctx.lineTo(3, -15);
+    ctx.fill();
+
+    ctx.strokeStyle = bodyColor;
     ctx.lineWidth = 3.5;
     ctx.beginPath();
-    ctx.moveTo(-3, -14);
-    ctx.lineTo(-2, -10);
-    ctx.moveTo(3, -14);
-    ctx.lineTo(2, -10);
+    ctx.moveTo(0, -15);
+    ctx.lineTo(0, -6);
     ctx.stroke();
 
     ctx.lineWidth = 4;
     ctx.beginPath();
-    ctx.moveTo(0, -12);
-    ctx.lineTo(0, -2);
-    ctx.stroke();
-
-    ctx.lineWidth = 3.5;
-    ctx.beginPath();
+    ctx.moveTo(0, -6);
+    ctx.lineTo(-22, -10);
     ctx.moveTo(0, -4);
-    ctx.lineTo(-18, -8);
+    ctx.lineTo(-24, 2);
     ctx.moveTo(0, -2);
-    ctx.lineTo(-20, 4);
+    ctx.lineTo(22, -8);
     ctx.moveTo(0, 0);
-    ctx.lineTo(18, -6);
-    ctx.moveTo(0, 2);
-    ctx.lineTo(20, 2);
+    ctx.lineTo(24, 0);
     ctx.stroke();
 
-    ctx.lineWidth = 5;
+    ctx.lineWidth = 5.5;
     ctx.beginPath();
-    ctx.moveTo(-8, 22);
-    ctx.lineTo(-12 + legSwing, 38);
-    ctx.moveTo(8, 22);
-    ctx.lineTo(12 - legSwing, 38);
+    ctx.moveTo(-10, 28);
+    ctx.lineTo(-14 + legSwing, 44);
+    ctx.moveTo(10, 28);
+    ctx.lineTo(14 - legSwing, 44);
     ctx.stroke();
 
     ctx.restore();

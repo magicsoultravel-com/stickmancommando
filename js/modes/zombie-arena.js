@@ -19,6 +19,15 @@
   }
 
   function spawnBrute(g) {
+    if (g.enemies.length >= g.maxEnemies) {
+      for (var i = 0; i < g.enemies.length; i++) {
+        if (g.enemies[i].isZombie && !g.enemies[i].isBrute) {
+          g.enemies.splice(i, 1);
+          break;
+        }
+      }
+    }
+
     var margin = 50;
     var edge = Math.floor(Math.random() * 4);
     var x;
@@ -30,15 +39,16 @@
     if (edge === 0 || edge === 2) x = S.snapGrid(x, g.ZOMBIE_GRID);
     else y = S.snapGrid(y, g.ZOMBIE_GRID);
     S.spawnEnemyAt(g, x, y, 'brute');
-    g.ui.waveBanner.textContent = 'BRUTE!';
+    g.shakeTimer = Math.max(g.shakeTimer || 0, 0.35);
+    g.ui.waveBanner.textContent = 'FAT BRUTE!';
     g.ui.waveBanner.classList.add('visible');
-    setTimeout(function () { g.ui.waveBanner.classList.remove('visible'); }, 1200);
+    setTimeout(function () { g.ui.waveBanner.classList.remove('visible'); }, 1400);
   }
 
   GameModes.register({
     id: 'zombie',
     name: 'Zombie Arena',
-    desc: 'Grid-lane horde. Every 10 kills a slow brute rises — 10 hits to drop it.',
+    desc: 'Grid-lane horde. Every 10 walker kills a fat brute bozo shambles in — 10 hits to drop it.',
     hint: '↑ ↓ ← → or mouse · SPACE shoot · nail the brutes',
     legacyHighScoreKeys: ['arena'],
     flags: { gore: true, mouseMove: true, topDown: true },
@@ -47,6 +57,7 @@
       g.spawnInterval = 0.22;
       g.maxEnemies = 55;
       g.zombieKillCount = 0;
+      g.nextBruteAt = 10;
       g.spawnEdge = Math.floor(Math.random() * 4);
       g.comboCount = 0;
       g.comboTimer = 0;
@@ -86,7 +97,10 @@
     onKill: function (g, enemy, hitAngle) {
       if (enemy.isZombie && !enemy.isBrute) {
         g.zombieKillCount += 1;
-        if (g.zombieKillCount % 10 === 0) spawnBrute(g);
+        if (g.zombieKillCount >= g.nextBruteAt) {
+          spawnBrute(g);
+          g.nextBruteAt += 10;
+        }
       }
       g.comboTimer = 2.2;
       g.comboCount = (g.comboCount || 0) + 1;
@@ -125,6 +139,19 @@
         legSwing: Math.sin(e.shamble) * 4,
         brute: e.isBrute
       });
+      if (e.isBrute && e.health < e.maxHealth) {
+        var barW = 36;
+        var barX = e.x - barW / 2;
+        var barY = e.y - e.radius - 14;
+        var pct = e.health / e.maxHealth;
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+        ctx.fillRect(barX, barY, barW, 5);
+        ctx.fillStyle = pct > 0.35 ? '#ff7b72' : '#ff3b30';
+        ctx.fillRect(barX, barY, barW * pct, 5);
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(barX, barY, barW, 5);
+      }
       return true;
     }
   });

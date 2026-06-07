@@ -15,20 +15,28 @@
     ctx.lineCap = 'round';
 
     if (modelId === 'ninja') {
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 2.5;
       ctx.beginPath();
-      ctx.arc(0, -10, 4.5, 0, Math.PI * 2);
+      ctx.arc(0, -10, 5, 0, Math.PI * 2);
       ctx.stroke();
-      ctx.fillStyle = '#21262d';
-      ctx.fillRect(-8, -14, 16, 4);
+      ctx.strokeStyle = '#d73a49';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(-7, -12);
+      ctx.lineTo(7, -12);
+      ctx.stroke();
+      ctx.fillStyle = '#d73a49';
+      ctx.beginPath();
+      ctx.moveTo(7, -12);
+      ctx.lineTo(12, -11);
+      ctx.lineTo(7, -10);
+      ctx.closePath();
+      ctx.fill();
       ctx.strokeStyle = color;
-      ctx.beginPath();
-      ctx.moveTo(-8, -12);
-      ctx.lineTo(8, -12);
-      ctx.stroke();
+      ctx.lineWidth = 2.5;
       ctx.beginPath();
       ctx.moveTo(0, -5);
-      ctx.lineTo(0, 11);
+      ctx.lineTo(0, 10);
       ctx.stroke();
     } else if (modelId === 'sage') {
       ctx.fillStyle = '#c9a227';
@@ -124,7 +132,7 @@
     drawHeadAndBody(ctx, modelId, color);
 
     ctx.strokeStyle = color;
-    ctx.lineWidth = modelId === 'heavy' ? 3 : modelId === 'lean' || modelId === 'ninja' ? 1.6 : 2.5;
+    ctx.lineWidth = modelId === 'heavy' ? 3 : modelId === 'lean' ? 1.6 : 2.5;
     ctx.lineCap = 'round';
 
     ctx.beginPath();
