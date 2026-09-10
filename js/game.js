@@ -1200,18 +1200,8 @@
   modelModalClose.addEventListener('click', closeModelModal);
   modelModal.querySelector('.modal-backdrop').addEventListener('click', closeModelModal);
 
-  overlay.addEventListener('click', function (e) {
-    if (e.target.closest('.mode-card') || e.target.closest('.mode-chevron') ||
-        e.target.closest('#model-modal') || e.target === modelBtn ||
-        e.target === startBtn || e.target === autoshootBtn ||
-        e.target === resumeBtn) return;
-    if (state === STATE.MODES && !startBtn.hidden) {
-      launchGame();
-    }
-    if (state === STATE.GAMEOVER && !startBtn.hidden) {
-      launchGame();
-    }
-  });
+  // No implicit launch from clicking empty overlay space — starting a game
+  // is always an explicit Deploy/Continue button press (or Space on the menu).
 
   startIntro();
   requestAnimationFrame(loop);

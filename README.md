@@ -12,7 +12,8 @@ Play locally by opening `index.html` (or `npm run dev`), or deploy to [GitHub Pa
 | Space | Shoot |
 | P / Esc | Pause / resume |
 | ⌂ (during play) | Home — back to the mode menu |
-| Space / Click | Start / redeploy / continue |
+| Space | Start / redeploy |
+| Space / Click | Continue (on death) |
 
 > **Continue**: die, then hit **Continue** (or `Space`/click the KIA overlay) to resume the exact run you died in — score, wave, position, enemies and pickups are restored. Quitting mid-run with the **×** button also leaves a save on the menu. A fresh **Deploy** always starts a clean run.
 
