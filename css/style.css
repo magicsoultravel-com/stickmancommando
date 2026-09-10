@@ -300,7 +300,8 @@ body {
 }
 
 #speed-btn,
-#exit-btn {
+#exit-btn,
+#pause-btn {
   width: 36px;
   height: 36px;
   border: 1px solid #484f58;
@@ -318,6 +319,16 @@ body {
   font-size: 1.4rem;
 }
 
+#pause-btn {
+  font-size: 1rem;
+}
+
+#pause-btn:hover {
+  background: rgba(227, 179, 65, 0.18);
+  border-color: #e3b341;
+  color: #ffd33d;
+}
+
 #speed-btn:hover {
   background: rgba(88, 166, 255, 0.18);
   border-color: #58a6ff;
@@ -328,6 +339,12 @@ body {
   background: rgba(248, 81, 73, 0.2);
   border-color: #f85149;
   color: #ff7b72;
+}
+
+/* Paused state: dim the playfield */
+#game-wrapper.paused #game {
+  filter: brightness(0.7) saturate(0.6);
+  transition: filter 0.2s ease;
 }
 
 .toggle-btn {

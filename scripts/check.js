@@ -63,5 +63,21 @@ for (const n of need) {
 }
 if (/\?v=/.test(html)) bad('cache-buster ?v= still in index.html');
 
+// 5) pause + continue-from-death features
+if (!html.includes('id="pause-btn"')) bad('pause button missing in index.html');
+else ok('pause button in index.html');
+if (!html.includes('id="resume-btn"')) bad('resume button missing in index.html');
+else ok('resume button in index.html');
+const gs = fs.readFileSync(path.join(root, 'js/game.js'), 'utf8');
+for (const fn of ['function togglePause', 'function resumeGame', 'function buildSnapshot',
+  'function persistSave', 'function loadSave', 'function clearSave', 'function updateBestProgress']) {
+  if (gs.includes(fn)) ok('game ' + fn.replace('function ', ''));
+  else bad('missing game fn ' + fn);
+}
+for (const key of ['SAVE_KEY = \'stickmanCommandoSave\'', "WAVES_BEST_KEY = 'stickmanCommandoWavesBest'", "INVADERS_BEST_KEY = 'stickmanCommandoInvadersBest'"]) {
+  if (gs.includes(key)) ok('game ' + key.split(' =')[0]);
+  else bad('missing game key ' + key);
+}
+
 if (fail) { console.error(fail + ' check(s) failed'); process.exit(1); }
 console.log('all checks passed');

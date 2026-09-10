@@ -13,9 +13,11 @@
   var modePicker = document.getElementById('mode-picker');
   var startBtn = document.getElementById('start-btn');
   var autoshootBtn = document.getElementById('autoshoot-btn');
+  var resumeBtn = document.getElementById('resume-btn');
   var hudAutoshoot = document.getElementById('hud-autoshoot');
   var exitBtn = document.getElementById('exit-btn');
   var speedBtn = document.getElementById('speed-btn');
+  var pauseBtn = document.getElementById('pause-btn');
   var playControls = document.getElementById('play-controls');
   var modelBtn = document.getElementById('model-btn');
   var modelModal = document.getElementById('model-modal');
@@ -34,6 +36,9 @@
   var AUTO_SHOOT_KEY = 'stickmanCommandoAutoshoot';
   var CHARACTER_KEY = 'stickmanCommandoCharacter';
   var HIGH_SCORE_PREFIX = 'stickmanCommandoHighScore_';
+  var SAVE_KEY = 'stickmanCommandoSave';
+  var WAVES_BEST_KEY = 'stickmanCommandoWavesBest';
+  var INVADERS_BEST_KEY = 'stickmanCommandoInvadersBest';
   var STATE = { INTRO: 'intro', MODES: 'modes', PLAYING: 'playing', GAMEOVER: 'gameover' };
 
   var MOCK_LEADERBOARD = [
@@ -80,6 +85,8 @@
   var speedIndex = 0;
   var gameSpeed = 1;
   var expandedModeId = null;
+  var paused = false;
+  var lastSave = null;
 
   var g = {
     canvas: canvas,
@@ -145,6 +152,186 @@
     }
   }
 
+  // ── Pause ────────────────────────────────────────────────────────────
+  function resetPauseUi() {
+    paused = false;
+    if (pauseBtn) {
+      pauseBtn.textContent = '⏸';
+      pauseBtn.title = 'Pause (P)';
+    }
+    if (gameWrapper) gameWrapper.classList.remove('paused');
+    waveBanner.classList.remove('visible');
+    bannerTimer = 0;
+  }
+
+  function togglePause() {
+    if (state !== STATE.PLAYING || !player) return;
+    paused = !paused;
+    if (pauseBtn) {
+      pauseBtn.textContent = paused ? '▶' : '⏸';
+      pauseBtn.title = paused ? 'Resume (P)' : 'Pause (P)';
+    }
+    if (gameWrapper) gameWrapper.classList.toggle('paused', paused);
+    if (paused) {
+      waveBanner.textContent = 'PAUSED';
+      waveBanner.classList.add('visible');
+      bannerTimer = 0; // stays up until unpaused
+    } else {
+      waveBanner.classList.remove('visible');
+    }
+  }
+
+  // ── Continue-from-death snapshot ─────────────────────────────────────
+  // Fields on g that we manage with dedicated locals/fields in the snapshot.
+  var SNAPSHOT_SKIP = {
+    canvas: 1, ctx: 1, gameWrapper: 1, ui: 1, keys: 1, mouse: 1,
+    player: 1, truck: 1, bullets: 1, enemyBullets: 1, enemies: 1,
+    particles: 1, pickups: 1, obstacles: 1, camera: 1,
+    state: 1, mode: 1, modeId: 1, STATE: 1,
+    highScore: 1, score: 1, autoShoot: 1, characterModel: 1,
+    wave: 1, zombieKillCount: 1, spawnTimer: 1, difficultyTimer: 1,
+    spawnInterval: 1, maxEnemies: 1, shakeTimer: 1, animTime: 1
+  };
+
+  function buildSnapshot() {
+    var snap = {
+      modeId: currentModeId,
+      score: score,
+      player: player,
+      truck: truck,
+      bullets: bullets,
+      enemyBullets: enemyBullets,
+      enemies: enemies,
+      particles: particles,
+      pickups: pickups,
+      obstacles: obstacles,
+      camera: camera,
+      animTime: animTime,
+      zombieKillCount: zombieKillCount,
+      spawnTimer: spawnTimer,
+      difficultyTimer: difficultyTimer,
+      spawnInterval: spawnInterval,
+      maxEnemies: maxEnemies,
+      wave: wave,
+      extra: {}
+    };
+    for (var k in g) {
+      if (!Object.prototype.hasOwnProperty.call(g, k)) continue;
+      if (SNAPSHOT_SKIP[k]) continue;
+      var v = g[k];
+      if (typeof v === 'function' || v === g || v === document) continue;
+      try {
+        if (JSON.stringify(v) !== undefined) snap.extra[k] = v;
+      } catch (err) { /* skip non-serializable leftovers */ }
+    }
+    return snap;
+  }
+
+  function persistSave() {
+    try {
+      lastSave = buildSnapshot();
+      localStorage.setItem(SAVE_KEY, JSON.stringify(lastSave));
+    } catch (err) {
+      console.warn('Save failed:', err);
+    }
+  }
+
+  function loadSave() {
+    if (lastSave) return lastSave;
+    try {
+      var raw = localStorage.getItem(SAVE_KEY);
+      lastSave = raw ? JSON.parse(raw) : null;
+    } catch (err) {
+      lastSave = null;
+    }
+    return lastSave;
+  }
+
+  function clearSave() {
+    lastSave = null;
+    try { localStorage.removeItem(SAVE_KEY); } catch (err) { /* ignore */ }
+  }
+
+  function resumeGame() {
+    var snap = loadSave();
+    if (!snap || !snap.player) return;
+    paused = false;
+
+    if (snap.modeId && currentModeId !== snap.modeId) {
+      currentModeId = snap.modeId;
+      selectMode(currentModeId);
+    }
+    setCanvasForMode();
+    mode = resolveMode();
+
+    // Island worlds are generated once per run; rebuild if we came back
+    // after a full page reload.
+    if (flag('xl') && window.XLMode && !XLMode.hasWorld()) {
+      XLMode.generateWorld((snap.extra && snap.extra.islandSeed) || Date.now());
+    }
+
+    player = snap.player;
+    bullets = snap.bullets || [];
+    enemyBullets = snap.enemyBullets || [];
+    enemies = snap.enemies || [];
+    particles = snap.particles || [];
+    pickups = snap.pickups || [];
+    obstacles = snap.obstacles || [];
+    truck = snap.truck || null;
+    camera = snap.camera || { x: 0, y: 0 };
+    animTime = snap.animTime || 0;
+    zombieKillCount = snap.zombieKillCount || 0;
+    spawnTimer = snap.spawnTimer || 0;
+    difficultyTimer = snap.difficultyTimer || 0;
+    spawnInterval = snap.spawnInterval != null ? snap.spawnInterval : 2.2;
+    maxEnemies = snap.maxEnemies != null ? snap.maxEnemies : 12;
+    wave = snap.wave || { number: 0, toSpawn: 0, phase: 'break', breakTimer: 0, bannerTimer: 0 };
+    score = snap.score || 0;
+
+    // Dodge a dead-on-arrival continue: 1hp if you died with 0.
+    if (player.health != null && player.health <= 0) player.health = 1;
+
+    if (snap.extra) {
+      for (var k in snap.extra) {
+        if (Object.prototype.hasOwnProperty.call(snap.extra, k)) {
+          g[k] = snap.extra[k];
+        }
+      }
+    }
+
+    syncGRefs();
+    pullFromG();
+
+    state = STATE.PLAYING;
+    hideOverlay();
+    setPlayControlsVisible(true);
+    hudAutoshoot.hidden = false;
+    loadHighScoreForMode(currentModeId);
+    updateHud();
+    clearSave();
+    GameAudio.resume();
+  }
+
+  function updateBestProgress() {
+    // Persistent progression for wave-based modes.
+    var n = 0;
+    var key = null;
+    if (currentModeId === 'waves') {
+      n = (wave && wave.number) || 0;
+      key = WAVES_BEST_KEY;
+    } else if (currentModeId === 'stickinvaders') {
+      n = (g.invaders && g.invaders.wave) || 0;
+      key = INVADERS_BEST_KEY;
+    }
+    if (!n || !key) return;
+    var stored = parseInt(localStorage.getItem(key) || '0', 10) || 0;
+    if (n > stored) {
+      localStorage.setItem(key, String(n));
+      g.highestWave = n;
+      g.bestWave = n;
+    }
+  }
+
   function syncGRefs() {
     g.player = player;
     g.truck = truck;
@@ -197,6 +384,7 @@
 
   function setPlayControlsVisible(visible) {
     playControls.hidden = !visible;
+    if (!visible) resetPauseUi();
   }
 
   function resolveMode() {
@@ -227,8 +415,12 @@
 
   syncModelBtn();
   armWaveBannerCompat();
-  mode = resolveMode();
-  buildModePicker();
+  try {
+    mode = resolveMode();
+    buildModePicker();
+  } catch (err) {
+    console.error('Menu build failed:', err);
+  }
   setCanvasForMode();
   syncAutoshootUi();
   syncSpeedUi();
@@ -327,19 +519,46 @@
   }
 
   function exitToMenu() {
+    var wasInGame = state === STATE.PLAYING || state === STATE.GAMEOVER;
     state = STATE.MODES;
     syncGRefs();
+    // Keep a snapshot when quitting mid-run or after death so "Continue"
+    // is available from the menu. Fresh deploys clear it in resetGame().
+    if (wasInGame && player) persistSave();
     setPlayControlsVisible(false);
     hudAutoshoot.hidden = true;
     Gore.clear();
+    resetPauseUi();
     showModeSelect();
   }
 
-  var HIDDEN_FROM_PICKER = { zombie: 1, shooters: 1, medkits: 1, variants: 1, leaderboard: 1 };
+  // Merged legacy redirects stay registered (old saves/scores carry over)
+  // but stay off the landing grid — Horde Survival is the single card.
+  var HIDDEN_FROM_PICKER = { zombie: true, shooters: true, medkits: true, variants: true, leaderboard: true };
+
+  function isHiddenFromPicker(id) {
+    if (!HIDDEN_FROM_PICKER) return false;
+    return !!HIDDEN_FROM_PICKER[id];
+  }
 
   function buildModePicker() {
     modePicker.innerHTML = '';
-    GameModes.list().filter(function (entry) { return !HIDDEN_FROM_PICKER[entry.id]; }).forEach(function (entry) {
+    var entries = [];
+    try {
+      entries = GameModes.list();
+    } catch (err) {
+      console.error('Menu build failed:', err);
+      entries = [];
+    }
+    var visible = entries.filter(function (entry) {
+      return entry && entry.id && !isHiddenFromPicker(entry.id);
+    });
+    if (visible.length === 0 && entries.length > 0) {
+      // never show an empty menu — fall back to all entries
+      console.warn('Mode filter hid everything; showing all modes');
+      visible = entries.filter(function (entry) { return entry && entry.id; });
+    }
+    visible.forEach(function (entry) {
       var card = document.createElement('button');
       card.type = 'button';
       card.className = 'mode-card' + (entry.id === currentModeId ? ' selected' : '');
@@ -420,6 +639,7 @@
   }
 
   function resetGame() {
+    clearSave();
     mode = resolveMode();
     setCanvasForMode();
     Gore.clear();
@@ -481,6 +701,16 @@
     closeModelModal();
     startBtn.textContent = options.deployLabel || 'Deploy';
 
+    // Continue-from-death: offer whenever a usable snapshot exists
+    resumeBtn.hidden = true;
+    if (options.showResume) {
+      var snap = loadSave();
+      if (snap && snap.player) {
+        resumeBtn.hidden = false;
+        resumeBtn.textContent = 'Continue · ' + (snap.score || 0);
+      }
+    }
+
     var existingBoard = document.getElementById('mock-leaderboard');
     if (existingBoard) existingBoard.remove();
 
@@ -524,9 +754,11 @@
     particles = [];
     pickups = [];
     syncGRefs();
+    resetPauseUi();
     selectMode(currentModeId);
     showOverlay('Pick a demo', mode.desc, {
-      showPicker: true, showDeploy: true, deployLabel: 'Deploy'
+      showPicker: true, showDeploy: true, deployLabel: 'Deploy',
+      showResume: true
     });
     GameAudio.playModeTune(currentModeId);
   }
@@ -541,6 +773,7 @@
 
   function startGame() {
     resetGame();
+    resetPauseUi();
     state = STATE.PLAYING;
     syncGRefs();
     hideOverlay();
@@ -558,13 +791,16 @@
       g.highScore = highScore;
       saveHighScore(highScore);
     }
+    persistSave();
+    updateBestProgress();
     showOverlay(
       'KIA',
       'Score: ' + score + (score >= highScore && score > 0 ? ' — New best!' : ''),
       {
         showDeploy: true,
         deployLabel: 'Redeploy',
-        mockLeaderboard: flag('mockLeaderboard')
+        mockLeaderboard: flag('mockLeaderboard'),
+        showResume: true
       }
     );
     setPlayControlsVisible(true);
@@ -898,8 +1134,8 @@
     var dt = Math.min((timestamp - lastTime) / 1000, 0.05);
     lastTime = timestamp;
     try {
-      tickBanner(dt * gameSpeed);
-      if (state === STATE.PLAYING) {
+      if (!paused) tickBanner(dt * gameSpeed);
+      if (state === STATE.PLAYING && !paused) {
         update(dt * gameSpeed);
       }
       render();
@@ -918,6 +1154,9 @@
     if (e.key === ' ' && state === STATE.MODES && !startBtn.hidden) {
       launchGame();
     }
+    if ((e.key === 'p' || e.key === 'P' || e.key === 'Escape') && state === STATE.PLAYING) {
+      togglePause();
+    }
   });
 
   window.addEventListener('keyup', function (e) {
@@ -925,11 +1164,16 @@
   });
 
   startBtn.addEventListener('click', launchGame);
+  resumeBtn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    resumeGame();
+  });
 
   autoshootBtn.addEventListener('click', toggleAutoshoot);
   hudAutoshoot.addEventListener('click', toggleAutoshoot);
   exitBtn.addEventListener('click', exitToMenu);
   speedBtn.addEventListener('click', toggleSpeed);
+  pauseBtn.addEventListener('click', togglePause);
 
   canvas.addEventListener('mousemove', function (e) {
     var pt = canvasPoint(e);
@@ -961,7 +1205,8 @@
   overlay.addEventListener('click', function (e) {
     if (e.target.closest('.mode-card') || e.target.closest('.mode-chevron') ||
         e.target.closest('#model-modal') || e.target === modelBtn ||
-        e.target === startBtn || e.target === autoshootBtn) return;
+        e.target === startBtn || e.target === autoshootBtn ||
+        e.target === resumeBtn) return;
     if (state === STATE.MODES && !startBtn.hidden) {
       launchGame();
     }

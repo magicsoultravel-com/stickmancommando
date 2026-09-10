@@ -10,7 +10,10 @@ Play locally by opening `index.html` (or `npm run dev`), or deploy to [GitHub Pa
 |-----|--------|
 | ↑ ↓ ← → | Move (also sets aim direction) |
 | Space | Shoot |
-| Space / Click | Start / redeploy |
+| P / Esc | Pause / resume |
+| Space / Click | Start / redeploy / continue |
+
+> **Continue**: die, then hit **Continue** (or `Space`/click the KIA overlay) to resume the exact run you died in — score, wave, position, enemies and pickups are restored. Quitting mid-run with the **×** button also leaves a save on the menu. A fresh **Deploy** always starts a clean run.
 
 Mode-specific: Jet Side uses ↑ ↓ for lanes + → thrust; Platform uses ← → walk + ↑ ↓ ladders + mouse aim; Stick Tetris uses ← → move, ↑ rotate, ↓ soft drop, SPACE slam; Stick Invaders uses ← → move + SPACE.
 
@@ -27,7 +30,7 @@ After the intro sting, pick a demo from the grid:
 | **Jet Side** (`jetside`, legacy key `sidescroll`) | `js/modes/jet-side.js` | Three-lane jetpack duel — thrust, dodge debris, hostiles shoot back |
 | **Stick Invaders** (`stickinvaders`) | `js/modes/stick-invaders.js` | Formation shooter with shields/bunkers — don't let them land |
 | **Bomb Tetris** (`sticktetris`) | `js/modes/stick-tetris.js` | Bomb blocks fall — full rows detonate, launching exploding stickmen + flash/shake |
-| **Waves** (`waves`) | `js/modes/waves.js` | Clear a wave, breather, next wave |
+| **Waves** (`waves`) | `js/modes/waves.js` | Clear a wave, breather, next wave. Best wave saved across runs and shown in the HUD |
 
 Retired (merged into Horde, hidden from picker, old saves carry over): `zombie`, `shooters`, `medkits`, `variants`, `leaderboard`.
 

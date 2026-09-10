@@ -11,7 +11,8 @@
     flags: { xl: true, mouseMove: true, enemyShoots: true },
 
     reset: function (g) {
-      XLMode.generateWorld(Date.now());
+      g.islandSeed = Date.now();
+      XLMode.generateWorld(g.islandSeed);
       g.spawnInterval = 2;
       g.maxEnemies = 18;
       g.exploredEast = false;

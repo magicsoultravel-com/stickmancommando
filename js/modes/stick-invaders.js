@@ -148,6 +148,7 @@
     flags: { invaders: true, enemyShoots: true, topDown: true },
 
     reset: function (g) {
+      g.bestWave = parseInt(localStorage.getItem('stickmanCommandoInvadersBest') || '0', 10) || 0;
       g.invaders = {
         wave: 0,
         ox: 0,
@@ -294,7 +295,7 @@
     drawHud: function (g, ctx) {
       ctx.fillStyle = 'rgba(139, 148, 158, 0.9)';
       ctx.font = '600 12px Segoe UI, system-ui, sans-serif';
-      ctx.fillText('Wave ' + g.invaders.wave, 16, 24);
+      ctx.fillText('Wave ' + g.invaders.wave + (g.bestWave > 0 ? '  ·  best ' + g.bestWave : ''), 16, 24);
       ctx.fillText(g.enemies.length + ' invaders', 16, 42);
     }
   });

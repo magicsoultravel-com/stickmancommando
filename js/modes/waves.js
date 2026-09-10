@@ -10,6 +10,7 @@
     flags: { mouseMove: true, topDown: true },
 
     reset: function (g) {
+      g.bestWave = parseInt(localStorage.getItem('stickmanCommandoWavesBest') || '0', 10) || 0;
       g.maxEnemies = 99;
       g.wave = { number: 0, toSpawn: 0, phase: 'break', breakTimer: 0, bannerTimer: 0 };
       startNextWave(g);
@@ -62,7 +63,7 @@
     drawHud: function (g, ctx) {
       ctx.fillStyle = 'rgba(230, 237, 243, 0.85)';
       ctx.font = '600 14px Segoe UI, system-ui, sans-serif';
-      ctx.fillText('Wave ' + g.wave.number, 16, g.canvas.height - 16);
+      ctx.fillText('Wave ' + g.wave.number + (g.bestWave > 0 ? '  ·  best ' + g.bestWave : ''), 16, g.canvas.height - 16);
       if (g.wave.phase === 'break') {
         ctx.fillStyle = 'rgba(139, 148, 158, 0.9)';
         ctx.fillText('Breather...', 16, g.canvas.height - 34);
