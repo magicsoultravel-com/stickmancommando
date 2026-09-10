@@ -335,9 +335,11 @@
     showModeSelect();
   }
 
+  var HIDDEN_FROM_PICKER = { zombie: 1, shooters: 1, medkits: 1, variants: 1, leaderboard: 1 };
+
   function buildModePicker() {
     modePicker.innerHTML = '';
-    GameModes.list().forEach(function (entry) {
+    GameModes.list().filter(function (entry) { return !HIDDEN_FROM_PICKER[entry.id]; }).forEach(function (entry) {
       var card = document.createElement('button');
       card.type = 'button';
       card.className = 'mode-card' + (entry.id === currentModeId ? ' selected' : '');
