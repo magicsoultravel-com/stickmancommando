@@ -1,0 +1,141 @@
+(function () {
+  'use strict';
+  var S = window.GameShared;
+
+  function spawnWalker(g, edgeOverride) {
+    var margin = 40;
+    var edge = edgeOverride != null ? edgeOverride : Math.floor(Math.random() * 4);
+    var x, y;
+    if (edge === 0) { x = Math.random() * g.canvas.width; y = -margin; }
+    else if (edge === 1) { x = g.canvas.width + margin; y = Math.random() * g.canvas.height; }
+    else if (edge === 2) { x = Math.random() * g.canvas.width; y = g.canvas.height + margin; }
+    else { x = -margin; y = Math.random() * g.canvas.height; }
+    if (edge === 0 || edge === 2) x = S.snapGrid(x, g.ZOMBIE_GRID);
+    else y = S.snapGrid(y, g.ZOMBIE_GRID);
+    y = Math.max(g.ZOMBIE_GRID, Math.min(g.canvas.height - g.ZOMBIE_GRID, y));
+    x = Math.max(g.ZOMBIE_GRID, Math.min(g.canvas.width - g.ZOMBIE_GRID, x));
+    S.spawnEnemyAt(g, x, y, 'walker');
+  }
+
+  function spawnBrute(g) {
+    if (g.enemies.length >= g.maxEnemies) {
+      for (var i = 0; i < g.enemies.length; i++) {
+        if (g.enemies[i].isZombie && !g.enemies[i].isBrute) { g.enemies.splice(i, 1); break; }
+      }
+    }
+    var margin = 50;
+    var edge = Math.floor(Math.random() * 4);
+    var x, y;
+    if (edge === 0) { x = Math.random() * g.canvas.width; y = -margin; }
+    else if (edge === 1) { x = g.canvas.width + margin; y = Math.random() * g.canvas.height; }
+    else if (edge === 2) { x = Math.random() * g.canvas.width; y = g.canvas.height + margin; }
+    else { x = -margin; y = Math.random() * g.canvas.height; }
+    if (edge === 0 || edge === 2) x = S.snapGrid(x, g.ZOMBIE_GRID);
+    else y = S.snapGrid(y, g.ZOMBIE_GRID);
+    S.spawnEnemyAt(g, x, y, 'brute');
+    g.shakeTimer = Math.max(g.shakeTimer || 0, 0.35);
+    g.showBanner('FAT BRUTE!', 1.4);
+  }
+
+  function spawnVariant(g) {
+    var roll = Math.random();
+    S.spawnTopDownGrunt(g, roll < 0.4 ? 'grunt' : roll < 0.7 ? 'runner' : 'tank');
+  }
+
+  GameModes.register({
+    id: 'horde',
+    name: 'Horde Survival',
+    desc: 'Zombie grid-lane horde + armed grunts, runners & tanks. Brutes every 10 kills, medkits drop, mock ranks on death.',
+    hint: 'move + SPACE shoot - nail brutes - grab green crosses - dodge red bolts',
+    legacyHighScoreKeys: ['zombie', 'arena', 'shooters', 'medkits', 'variants', 'leaderboard'],
+    flags: { gore: true, mouseMove: true, topDown: true, enemyShoots: true, medkits: true, variants: true, mockLeaderboard: true },
+    reset: function (g) {
+      g.spawnInterval = 0.9; g.maxEnemies = 30;
+      g.zombieKillCount = 0; g.nextBruteAt = 10;
+      g.spawnEdge = Math.floor(Math.random() * 4);
+      g.comboCount = 0; g.comboTimer = 0; g.streak = 0; g.streakTimer = 0;
+    },
+    createPlayer: function (g) { return S.defaultTopDownPlayer(g); },
+    spawn: function (g, dt) {
+      g.spawnTimer += dt;
+      if (g.spawnTimer >= g.spawnInterval && g.enemies.length < g.maxEnemies) {
+        g.spawnTimer = 0;
+        if (Math.random() < 0.55) g.spawnEdge = Math.floor(Math.random() * 4);
+        var n = 2 + Math.floor(Math.random() * 2);
+        for (var i = 0; i < n; i++) spawnWalker(g, g.spawnEdge);
+        if (Math.random() < 0.6) spawnVariant(g);
+      }
+      g.difficultyTimer += dt;
+      if (g.difficultyTimer > 15) {
+        g.difficultyTimer = 0;
+        g.spawnInterval = Math.max(0.35, g.spawnInterval - 0.06);
+        g.maxEnemies = Math.min(48, g.maxEnemies + 2);
+      }
+    },
+    move: function (g, dt) { S.moveTopDown(g, dt); },
+    tick: function (g, dt) {
+      if (g.comboTimer > 0) { g.comboTimer -= dt; if (g.comboTimer <= 0) g.comboCount = 0; }
+      if (g.streakTimer > 0) { g.streakTimer -= dt; if (g.streakTimer <= 0) g.streak = 0; }
+    },
+    onKill: function (g, enemy, hitAngle) {
+      if (enemy.isZombie && !enemy.isBrute) {
+        g.zombieKillCount += 1;
+        if (g.zombieKillCount >= g.nextBruteAt) { spawnBrute(g); g.nextBruteAt += 10; }
+      }
+      g.comboTimer = 2.2; g.comboCount = (g.comboCount || 0) + 1;
+      if (g.comboCount > 1) {
+        g.score += g.comboCount * 3;
+        if (g.comboCount % 5 === 0) g.showBanner('COMBO x' + g.comboCount, 0.9);
+      }
+      g.streakTimer = 2.5; g.streak = (g.streak || 0) + 1;
+      if (g.streak > 1) g.score += g.streak * 2;
+      if (Math.random() <= 0.3) g.pickups.push({ x: enemy.x, y: enemy.y, radius: 10, bob: 0 });
+      if (enemy.isBrute && window.Gore) {
+        Gore.spawnExplosion(enemy.x, enemy.y, enemy.color, hitAngle);
+        Gore.spawnExplosion(enemy.x, enemy.y, enemy.color, (hitAngle || 0) + 1);
+      } else if (enemy.isZombie && window.Gore) {
+        Gore.spawnExplosion(enemy.x, enemy.y, enemy.color || '#7d9a6a', hitAngle);
+      }
+    },
+    updateEnemy: function (g, dt, enemy) { S.chaseEnemy(g, dt, enemy); },
+    contactDamage: function (g, enemy) {
+      return enemy.isBrute ? 28 : enemy.isZombie ? 12 : 18;
+    },
+    drawBackground: function (g, ctx) { S.drawZombieGrid(ctx, g); },
+    drawEnemy: function (g, ctx, e) {
+      var wobble = Math.sin(e.wobble) * 2;
+      if (e.isZombie) {
+        S.drawStickmanUpright(ctx, e.x, e.y + wobble, g.player.x - e.x, g.player.y - e.y, e.color, e.scale,
+          { zombieArms: !e.isBrute, legSwing: Math.sin(e.shamble) * 4, brute: e.isBrute });
+      } else {
+        S.drawStickmanUpright(ctx, e.x, e.y + wobble, g.player.x - e.x, g.player.y - e.y, e.color, e.scale, { armed: true });
+      }
+      if (e.isBrute && e.health < e.maxHealth) {
+        var barW = 36, barX = e.x - barW / 2, barY = e.y - e.radius - 14;
+        var pct = e.health / e.maxHealth;
+        ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(barX, barY, barW, 5);
+        ctx.fillStyle = pct > 0.35 ? '#ff7b72' : '#ff3b30'; ctx.fillRect(barX, barY, barW * pct, 5);
+        ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1; ctx.strokeRect(barX, barY, barW, 5);
+      }
+      return true;
+    }
+  });
+
+  var LEGACY = [
+    { id: 'zombie', name: 'Zombie Arena' },
+    { id: 'shooters', name: 'Enemy fire' },
+    { id: 'medkits', name: 'Medkits' },
+    { id: 'variants', name: 'Enemy types' },
+    { id: 'leaderboard', name: 'Leaderboard demo' }
+  ];
+  LEGACY.forEach(function (cfg) {
+    GameModes.register({
+      id: cfg.id, name: cfg.name + ' (Horde)',
+      desc: 'Merged into Horde Survival - same game, one high score.',
+      hint: 'Merged into Horde Survival',
+      legacyHighScoreKeys: [],
+      flags: {},
+      extends: 'horde'
+    });
+  });
+})();

@@ -20,18 +20,16 @@ After the intro sting, pick a demo from the grid:
 
 | Mode (id) | File | What to try |
 |------|------|-------------|
-| **Zombie Arena** (`zombie`) | `js/modes/zombie-arena.js` | Walker horde on grid lanes — kills spray gore (heads, limbs); every 10 kills a brute spawns |
-| **Stickman Island** (`stickmanisland`, legacy key `animatedxl`) | `js/modes/animated-xl.js` | 1280×720 scrollable map — hills, rivers, bridges, trees, lean animated stickmen, enemy fire |
+| **Horde Survival** (`horde`) | `js/modes/horde-survival.js` | Zombie grid-lane horde + armed grunts/runners/tanks. Brutes every 10 kills, 30% medkit drops, combo+streak bonus, mock ranks on death |
+| **Stickman Island** (`stickmanisland`, legacy key `animatedxl`) | `js/modes/animated-xl.js` | 1280x720 scrollable map — hills, rivers, bridges, trees, lean animated stickmen, enemy fire |
 | **Drone Drive** (`dronedrive`, legacy key `dronechase`) | `js/modes/drone-drive.js` | Truck bed turret — aim crosshair on a bumpy road, shoot stick-drones |
 | **Platform Raid** (`platform`) | `js/modes/platform-raid.js` | Run, climb ladders, shoot — clear levels then reach the exit |
 | **Jet Side** (`jetside`, legacy key `sidescroll`) | `js/modes/jet-side.js` | Three-lane jetpack duel — thrust, dodge debris, hostiles shoot back |
 | **Stick Invaders** (`stickinvaders`) | `js/modes/stick-invaders.js` | Formation shooter with shields/bunkers — don't let them land |
-| **Stick Tetris** (`sticktetris`) | `js/modes/stick-tetris.js` | Falling-block stacker where every block is a stickman corpse |
-| **Enemy fire** (`shooters`) | `js/modes/topdown-modes.js` | Red stickmen shoot back — dodge their bullets |
+| **Bomb Tetris** (`sticktetris`) | `js/modes/stick-tetris.js` | Bomb blocks fall — full rows detonate, launching exploding stickmen + flash/shake |
 | **Waves** (`waves`) | `js/modes/waves.js` | Clear a wave, breather, next wave |
-| **Medkits** (`medkits`) | `js/modes/topdown-modes.js` | Green crosses drop on kills — walk over to heal |
-| **Enemy types** (`variants`) | `js/modes/topdown-modes.js` | Orange runners, red grunts, purple tanks |
-| **Leaderboard demo** (`leaderboard`, extends `zombie`) | `js/modes/leaderboard.js` | Mock global scoreboard on game over (not live) |
+
+Retired (merged into Horde, hidden from picker, old saves carry over): `zombie`, `shooters`, `medkits`, `variants`, `leaderboard`.
 
 Each mode saves its own high score in your browser (`stickmanCommandoHighScore_<id>`).
 

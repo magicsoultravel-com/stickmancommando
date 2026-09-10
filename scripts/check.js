@@ -9,8 +9,8 @@ const root = path.join(__dirname, '..');
 const jsFiles = [
   'js/audio.js', 'js/gore.js', 'js/characters.js', 'js/shared.js',
   'js/xl-mode.js', 'js/game.js', 'js/modes/registry.js',
-  'js/modes/zombie-arena.js', 'js/modes/leaderboard.js',
-  'js/modes/topdown-modes.js', 'js/modes/waves.js',
+  'js/modes/horde-survival.js',
+  'js/modes/waves.js',
   'js/modes/stick-invaders.js', 'js/modes/platform-raid.js',
   'js/modes/animated-xl.js', 'js/modes/drone-drive.js',
   'js/modes/jet-side.js', 'js/modes/stick-tetris.js'
@@ -36,8 +36,7 @@ const src = jsFiles
   .map((f) => fs.readFileSync(path.join(root, f), 'utf8')).join('\n');
 const ids = [...src.matchAll(/id:\s*'([^']+)'/g)].map((m) => m[1])
   .filter((id) => !/^[A-Z]$/.test(id) && !['arena', 'animatedxl', 'dronechase', 'sidescroll'].includes(id));
-const expected = ['zombie', 'stickmanisland', 'dronedrive', 'jetside', 'stickinvaders',
-  'platform', 'sticktetris', 'shooters', 'medkits', 'variants', 'waves', 'leaderboard'];
+const expected = ['horde', 'zombie', 'shooters', 'medkits', 'variants', 'leaderboard', 'stickmanisland', 'dronedrive', 'jetside', 'stickinvaders', 'platform', 'sticktetris', 'waves'];
 for (const id of expected) {
   if (ids.includes(id)) ok('mode id ' + id);
   else bad('missing mode id ' + id);

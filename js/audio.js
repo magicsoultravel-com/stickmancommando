@@ -64,6 +64,11 @@
   }
 
   var MODE_TUNES = {
+    horde: [
+      { freq: 98, type: 'sawtooth' },
+      { freq: 87, type: 'sawtooth' },
+      { freq: 73, dur: 0.4, vol: 1.3, gap: 0.5 }
+    ],
     zombie: [
       { freq: 98, type: 'sawtooth' },
       { freq: 87, type: 'sawtooth' },
@@ -134,6 +139,8 @@
 
   function playModeTune(modeId) {
     resume();
+    // legacy ids share horde's tune
+    if (modeId === 'shooters' || modeId === 'medkits' || modeId === 'variants' || modeId === 'leaderboard') modeId = 'horde';
     var tune = MODE_TUNES[modeId] || DEFAULT_TUNE;
     playMotif(tune, 0.12);
   }

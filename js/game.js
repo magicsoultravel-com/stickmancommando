@@ -45,7 +45,7 @@
   ];
 
   var state = STATE.INTRO;
-  var currentModeId = 'zombie';
+  var currentModeId = 'horde';
   var mode = null;
   var keys = {};
   var lastTime = 0;
@@ -200,7 +200,7 @@
   }
 
   function resolveMode() {
-    var m = GameModes.get(currentModeId) || GameModes.get('zombie');
+    var m = GameModes.get(currentModeId) || GameModes.get('horde');
     if (!m) {
       console.error('No modes registered; falling back to stub');
       return { id: 'stub', name: 'Stub', desc: '', hint: '', flags: {} };
@@ -335,9 +335,11 @@
     showModeSelect();
   }
 
+  var HIDDEN_FROM_PICKER = { zombie: 1, shooters: 1, medkits: 1, variants: 1, leaderboard: 1 };
+
   function buildModePicker() {
     modePicker.innerHTML = '';
-    GameModes.list().forEach(function (entry) {
+    GameModes.list().filter(function (entry) { return !HIDDEN_FROM_PICKER[entry.id]; }).forEach(function (entry) {
       var card = document.createElement('button');
       card.type = 'button';
       card.className = 'mode-card' + (entry.id === currentModeId ? ' selected' : '');

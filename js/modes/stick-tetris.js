@@ -68,6 +68,8 @@
 
   var PIECE_IDS = ['I', 'O', 'T', 'S', 'Z', 'J', 'L'];
 
+  function layoutOf(g) { return boardLayout(g); }
+
   function boardLayout(g) {
     var boardW = COLS * CELL;
     var boardH = ROWS * CELL;
@@ -161,7 +163,37 @@
       t.lines += cleared;
       t.level = 1 + Math.floor(t.lines / 10);
       t.dropInterval = Math.max(0.08, 0.85 - t.level * 0.06);
-      g.showBanner(cleared === 4 ? 'BONK TETRIS!' : 'Cleared ' + cleared, 0.7);
+      t.booms = t.booms || [];
+      for (var bi = 0; bi < cleared; bi++) {
+        // one exploding stickman per cleared row, launched from that row
+        t.booms.push({
+          x: layoutOf(g).ox + Math.random() * layoutOf(g).w,
+          y: layoutOf(g).oy + (ROWS - 1 - bi) * CELL,
+          vx: (Math.random() - 0.5) * 320,
+          vy: -180 - Math.random() * 220,
+          rot: Math.random() * Math.PI * 2,
+          spin: (Math.random() - 0.5) * 14,
+          life: 1.4 + Math.random() * 0.6,
+          color: ['#ff7b72', '#ffa657', '#e3b341', '#79c0ff'][Math.floor(Math.random() * 4)],
+          seed: Math.random() * 100
+        });
+      }
+      // screen juice: flash + shake + particles
+      t.flash = 0.28;
+      g.shakeTimer = Math.max(g.shakeTimer || 0, 0.1 + cleared * 0.06);
+      var layoutC = layoutOf(g);
+      for (var pi = 0; pi < cleared * 16; pi++) {
+        g.particles.push({
+          x: layoutC.ox + Math.random() * layoutC.w,
+          y: layoutC.oy + Math.random() * layoutC.h,
+          vx: (Math.random() - 0.5) * 380,
+          vy: (Math.random() - 0.5) * 380,
+          life: 0.4 + Math.random() * 0.4,
+          color: pi % 3 === 0 ? '#ffd33d' : pi % 3 === 1 ? '#ff7b72' : '#ffa657',
+          size: 2 + Math.random() * 3
+        });
+      }
+      g.showBanner(cleared === 4 ? 'STICKNOVA!' : cleared > 1 ? 'CHAIN BOOM x' + cleared : 'BOOM!', 0.8);
       g.updateHud();
     }
   }
@@ -228,61 +260,63 @@
     return ghost.y;
   }
 
-  function drawDisfiguredStick(ctx, x, y, size, seed, color, animTime, alpha) {
+  function drawBomb(ctx, x, y, size, seed, color, animTime, alpha) {
     ctx.save();
     ctx.globalAlpha = alpha == null ? 1 : alpha;
-    ctx.translate(x + size / 2, y + size - 3);
-    var s = size / 26;
-    ctx.scale(s, s);
-
-    var wobble = Math.sin(animTime * 5 + seed) * 0.25;
-    var lean = Math.sin(seed * 1.7) * 0.35 + wobble;
-    ctx.rotate(lean);
-
-    var headOffX = Math.sin(seed * 2.3) * 4;
-    var headOffY = -16 + Math.cos(seed * 1.1) * 3;
-    var legL = 8 + Math.sin(seed * 4) * 12;
-    var legR = 8 + Math.cos(seed * 3.5) * 12;
-    var armL = Math.sin(seed * 5) * 14;
-    var armR = Math.cos(seed * 4.2) * 14;
-
-    ctx.strokeStyle = color;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.lineWidth = 2.2;
-
-    ctx.beginPath();
-    ctx.moveTo(-3 + Math.sin(seed) * 2, -2);
-    ctx.lineTo(-4 + legL * 0.2, 18);
-    ctx.moveTo(3 - Math.sin(seed) * 2, -2);
-    ctx.lineTo(4 + legR * 0.2, 18);
+    var cx = x + size / 2, cy = y + size / 2;
+    var r = size * 0.36;
+    // bomb body
+    var grad = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.35, r * 0.15, cx, cy, r);
+    grad.addColorStop(0, '#3d444d');
+    grad.addColorStop(0.55, '#161b22');
+    grad.addColorStop(1, '#060810');
+    ctx.fillStyle = grad;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = color; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
+    // highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.beginPath(); ctx.arc(cx - r * 0.32, cy - r * 0.36, r * 0.14, 0, Math.PI * 2); ctx.fill();
+    // cap + fuse with spark
+    ctx.fillStyle = '#6e7681';
+    ctx.fillRect(cx - 2.5, cy - r - 5, 5, 4);
+    var flick = Math.sin(animTime * 18 + seed) * 2;
+    ctx.strokeStyle = '#8b949e'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(cx, cy - r - 5);
+    ctx.quadraticCurveTo(cx + 3 + flick, cy - r - 9, cx + 5, cy - r - 6);
     ctx.stroke();
+    var sparkR = 1.5 + Math.abs(Math.sin(animTime * 22 + seed * 2)) * 1.8;
+    ctx.fillStyle = Math.sin(animTime * 22 + seed) > 0 ? '#ffd33d' : '#ff7b72';
+    ctx.beginPath(); ctx.arc(cx + 5, cy - r - 6, sparkR, 0, Math.PI * 2); ctx.fill();
+    // skull tick mark in piece color
+    ctx.fillStyle = color;
+    ctx.font = '700 7px Segoe UI, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('x', cx, cy + 2.5);
+    ctx.textAlign = 'left';
+    ctx.restore();
+  }
 
-    ctx.lineWidth = 2.5;
-    ctx.beginPath();
-    ctx.moveTo(0, -2);
-    ctx.lineTo(Math.sin(seed * 2) * 3, -10);
-    ctx.stroke();
+  function drawDisfiguredStick(ctx, x, y, size, seed, color, animTime, alpha) {
+    // legacy name kept: blocks are bombs now
+    drawBomb(ctx, x, y, size, seed, color, animTime, alpha);
+  }
 
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(0, -10);
-    ctx.lineTo(-6 + armL * 0.3, -4 + armL * 0.15);
-    ctx.moveTo(0, -10);
-    ctx.lineTo(6 + armR * 0.3, -6 + armR * 0.12);
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.arc(headOffX, headOffY, 3.5 + Math.sin(seed) * 0.8, 0, Math.PI * 2);
-    ctx.stroke();
-
-    if (seed % 3 === 0) {
-      ctx.fillStyle = '#ff7b72';
-      ctx.beginPath();
-      ctx.arc(headOffX - 1.5, headOffY - 1, 1.2, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
+  function drawFlyingStick(ctx, b) {
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, b.life * 1.5);
+    ctx.translate(b.x, b.y);
+    ctx.rotate(b.rot);
+    ctx.strokeStyle = b.color; ctx.fillStyle = b.color;
+    ctx.lineWidth = 2; ctx.lineCap = 'round';
+    var flail = Math.sin(b.seed + b.life * 18) * 6;
+    ctx.beginPath(); ctx.arc(0, -10, 4, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, -6); ctx.lineTo(0, 6); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, -3); ctx.lineTo(-6, 2 + flail); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, -3); ctx.lineTo(6, 2 - flail); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, 6); ctx.lineTo(-4, 16); ctx.moveTo(0, 6); ctx.lineTo(4, 16); ctx.stroke();
+    // fuse spark on the way out
+    ctx.fillStyle = '#ffd33d';
+    ctx.beginPath(); ctx.arc(6, -12, 1.8, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
   }
 
@@ -363,10 +397,22 @@
       drawPiece(ctx, layout, t.current, g.animTime, 1);
     }
 
+    // detonation aftermath: exploding stickmen tumbling + blast flash
+    if (t.booms) {
+      for (var bi = 0; bi < t.booms.length; bi++) {
+        drawFlyingStick(ctx, t.booms[bi]);
+      }
+    }
+    S.drawParticles(ctx, g.particles);
+    if (t.flash > 0) {
+      ctx.fillStyle = 'rgba(255, 211, 61, ' + Math.min(0.35, t.flash) + ')';
+      ctx.fillRect(layout.ox - 4, layout.oy - 4, layout.w + 8, layout.h + 8);
+    }
+
     var panelX = layout.ox + layout.w + 24;
     ctx.fillStyle = '#8b949e';
     ctx.font = '600 11px Segoe UI, system-ui, sans-serif';
-    ctx.fillText('STICK TETRIS', panelX, layout.oy + 8);
+    ctx.fillText('BOMB TETRIS', panelX, layout.oy + 8);
     ctx.fillStyle = '#58a6ff';
     ctx.font = '600 13px Segoe UI, system-ui, sans-serif';
     ctx.fillText('Level ' + t.level, panelX, layout.oy + 32);
@@ -401,8 +447,8 @@
   GameModes.register({
     id: 'sticktetris',
     name: 'Stick Tetris',
-    desc: 'Classic falling stacks — every block is a twisted stickman corpse.',
-    hint: '← → move · ↑ rotate · ↓ drop · SPACE slam',
+    desc: 'Bomb blocks fall - full rows detonate into exploding stickmen.',
+    hint: '← → move · ↑ rotate · ↓ drop · SPACE slam · rows go BOOM',
     flags: { tetris: true },
 
     reset: function (g) {
@@ -417,7 +463,9 @@
         lines: 0,
         latch: {},
         moveDelay: 0,
-        softDrop: false
+        softDrop: false,
+        booms: [],
+        flash: 0
       };
       g.score = 0;
     },
@@ -466,8 +514,26 @@
 
     tick: function (g, dt) {
       var t = g.tetris;
-      if (!t || !t.current || g.state !== g.STATE.PLAYING) return;
-
+      if (!t || g.state !== g.STATE.PLAYING) return;
+      if (t.flash > 0) t.flash -= dt;
+      // flying exploding stickmen
+      if (t.booms) {
+        for (var i = t.booms.length - 1; i >= 0; i--) {
+          var b = t.booms[i];
+          b.vy += 700 * dt;
+          b.x += b.vx * dt; b.y += b.vy * dt;
+          b.rot += b.spin * dt; b.life -= dt;
+          if (b.life <= 0) t.booms.splice(i, 1);
+        }
+      }
+      // falling particles (shared with shooter modes)
+      for (var p = g.particles.length - 1; p >= 0; p--) {
+        var part = g.particles[p];
+        part.x += part.vx * dt; part.y += part.vy * dt;
+        part.life -= dt;
+        if (part.life <= 0) g.particles.splice(p, 1);
+      }
+      if (!t.current) return;
       t.dropTimer += dt;
       if (t.dropTimer >= t.dropInterval) {
         t.dropTimer = 0;
