@@ -84,7 +84,7 @@
   var SPEED_LABELS = ['1×', '2×', '½×'];
   var speedIndex = 0;
   var gameSpeed = 1;
-  var expandedModeId = null;
+  var allModesExpanded = false;
   var paused = false;
   var lastSave = null;
 
@@ -562,7 +562,7 @@
       var card = document.createElement('button');
       card.type = 'button';
       card.className = 'mode-card' + (entry.id === currentModeId ? ' selected' : '');
-      if (entry.id === expandedModeId) card.classList.add('expanded');
+      if (allModesExpanded) card.classList.add('expanded');
       card.dataset.mode = entry.id;
       card.innerHTML =
         '<div class="mode-card-head"><h3>' + entry.name + '</h3><span class="mode-chevron">▸</span></div>' +
@@ -577,17 +577,8 @@
 
       card.querySelector('.mode-chevron').addEventListener('click', function (e) {
         e.stopPropagation();
+        allModesExpanded = !allModesExpanded;
         selectMode(entry.id);
-        if (card.classList.contains('expanded')) {
-          card.classList.remove('expanded');
-          expandedModeId = null;
-        } else {
-          modePicker.querySelectorAll('.mode-card').forEach(function (c) {
-            c.classList.remove('expanded');
-          });
-          card.classList.add('expanded');
-          expandedModeId = entry.id;
-        }
         GameAudio.resume();
         GameAudio.playModeTune(entry.id);
       });
@@ -612,7 +603,9 @@
   function selectMode(modeId) {
     currentModeId = modeId;
     mode = resolveMode();
-    setCanvasForMode();
+    // Don't resize the play field just for browsing the menu — the
+    // canvas size is applied on deploy (resetGame) / continue (resumeGame).
+    syncGRefs();
     loadHighScoreForMode(modeId);
     overlayHint.textContent = mode.hint;
     overlaySubtitle.textContent = mode.desc;
@@ -746,6 +739,11 @@
 
   function showModeSelect() {
     state = STATE.MODES;
+    // Landing screen uses a fixed canvas size so clicking cards never
+    // reflows the wrapper (an XL run would leave it 1280px wide).
+    gameWrapper.classList.remove('xl-mode');
+    canvas.width = 960;
+    canvas.height = 540;
     syncGRefs();
     Gore.clear();
     bullets = [];
