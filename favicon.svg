@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <!-- bg = #hud h1 header color #58a6ff -->
+  <rect x="0" y="0" width="256" height="256" rx="56" fill="#58a6ff"/>
+
+  <!-- back arm -->
+  <path d="M128 148 L106 168" stroke="#e3b341" stroke-width="8" stroke-linecap="round" fill="none"/>
+
+  <!-- legs -->
+  <path d="M128 200 L104 238 M128 200 L152 238" stroke="#e3b341" stroke-width="9" stroke-linecap="round" fill="none"/>
+
+  <!-- torso + head -->
+  <line x1="128" y1="126" x2="128" y2="200" stroke="#e3b341" stroke-width="11" stroke-linecap="round"/>
+  <circle cx="128" cy="130" r="22" stroke="#e3b341" stroke-width="11" fill="none"/>
+
+  <!-- sage pointy hat (slightly tilted) -->
+  <polygon points="140,38 86,108 170,108" fill="#c9a227" stroke="#a88620" stroke-width="5" stroke-linejoin="round"/>
+
+  <!-- shooting arm + pistol (grip + barrel) -->
+  <path d="M128 150 L178 138 M178 138 L170 154 M180 137 L214 105"
+        stroke="#e3b341" stroke-width="9" stroke-linecap="round" fill="none"/>
+
+  <!-- muzzle flash -->
+  <polygon points="236,104 222.6,108.6 218,122 213.4,108.6 200,104 213.4,99.4 218,86 222.6,99.4" fill="#ffe9a8"/>
+  <circle cx="218" cy="104" r="6" fill="#ffffdf"/>
+</svg>

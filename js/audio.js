@@ -41,17 +41,33 @@
     osc.stop(start + duration + 0.05);
   }
 
-  function playMotif(notes, vol) {
+  function playMotif(notes, vol, onNote) {
     const audio = getContext();
     if (!audio) return Promise.resolve();
     vol = vol || 0.14;
     const now = audio.currentTime;
     let t = 0;
     notes.forEach(function (n) {
-      playTone(n.freq, now + t, n.dur || 0.22, n.type || 'sawtooth', vol * (n.vol || 1));
+      var dur = n.dur || 0.22;
+      playTone(n.freq, now + t, dur, n.type || 'sawtooth', vol * (n.vol || 1));
+      if (typeof onNote === 'function') {
+        (function (freq, duration, delayMs) {
+          setTimeout(function () {
+            onNote({ freq: freq, dur: duration });
+          }, delayMs);
+        })(n.freq, dur, Math.round(t * 1000));
+      }
       t += n.gap != null ? n.gap : 0.28;
     });
     return Promise.resolve();
+  }
+
+  function playKeyNote(freq, duration) {
+    resume();
+    var audio = getContext();
+    if (!audio || !freq) return;
+    var dur = duration != null ? duration : 0.28;
+    playTone(freq, audio.currentTime, dur, 'sawtooth', 0.12);
   }
 
   function playIntroSting() {
@@ -137,17 +153,19 @@
     { freq: 330, dur: 0.3, gap: 0.4 }
   ];
 
-  function playModeTune(modeId) {
+  function playModeTune(modeId, options) {
     resume();
+    options = options || {};
     // legacy ids share horde's tune
     if (modeId === 'shooters' || modeId === 'medkits' || modeId === 'variants' || modeId === 'leaderboard') modeId = 'horde';
     var tune = MODE_TUNES[modeId] || DEFAULT_TUNE;
-    playMotif(tune, 0.12);
+    playMotif(tune, 0.12, options.onNote);
   }
 
   window.GameAudio = {
     resume: resume,
     playIntroSting: playIntroSting,
-    playModeTune: playModeTune
+    playModeTune: playModeTune,
+    playKeyNote: playKeyNote
   };
 })();

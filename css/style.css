@@ -586,3 +586,167 @@ body {
 .wave-banner.visible {
   opacity: 1;
 }
+
+/* ── Synth keyboard ──────────────────────────────────────────────────── */
+
+#keyboard-panel {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 12px 10px;
+  border-top: 1px solid #30363d;
+  background: #12161c;
+}
+
+#keyboard-panel[hidden] {
+  display: none;
+}
+
+.keyboard-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+#keyboard-scroll-left,
+#keyboard-scroll-right {
+  width: 28px;
+  height: 24px;
+  border: 1px solid #484f58;
+  border-radius: 4px;
+  background: #21262d;
+  color: #e6edf3;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+
+#keyboard-scroll-left:hover,
+#keyboard-scroll-right:hover {
+  border-color: #58a6ff;
+  background: rgba(88, 166, 255, 0.12);
+}
+
+#keyboard-range-label {
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8b949e;
+  min-width: 5.5em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+#keyboard-keys {
+  position: relative;
+  display: flex;
+  height: 88px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: #30363d transparent;
+  user-select: none;
+  touch-action: none;
+}
+
+.kb-white {
+  position: relative;
+  flex: 0 0 56px;
+  width: 56px;
+  height: 100%;
+  margin: 0 1px;
+  padding: 0;
+  border: 1px solid #484f58;
+  border-radius: 0 0 4px 4px;
+  background: linear-gradient(180deg, #e8edf2 0%, #c9d1d9 100%);
+  color: #6e7681;
+  font-size: 0.55rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 6px;
+  transition: background 0.06s ease, box-shadow 0.06s ease;
+}
+
+.kb-white:hover {
+  background: linear-gradient(180deg, #f0f3f6 0%, #d8dee4 100%);
+}
+
+.kb-white.active {
+  background: linear-gradient(180deg, #79c0ff 0%, #58a6ff 100%);
+  color: #0d1117;
+  box-shadow: 0 0 10px rgba(88, 166, 255, 0.55);
+  border-color: #58a6ff;
+}
+
+.kb-black {
+  position: absolute;
+  top: 0;
+  width: 34px;
+  height: 54%;
+  z-index: 2;
+  margin: 0;
+  padding: 0;
+  border: 1px solid #0d1117;
+  border-radius: 0 0 3px 3px;
+  background: linear-gradient(180deg, #30363d 0%, #161b22 100%);
+  color: transparent;
+  font-size: 0;
+  cursor: pointer;
+  transition: background 0.06s ease, box-shadow 0.06s ease;
+}
+
+.kb-black:hover {
+  background: linear-gradient(180deg, #484f58 0%, #21262d 100%);
+}
+
+.kb-black.active {
+  background: linear-gradient(180deg, #e3b341 0%, #d29922 100%);
+  box-shadow: 0 0 10px rgba(227, 179, 65, 0.6);
+  border-color: #e3b341;
+}
+
+#pause-keyboard-btn {
+  width: auto;
+  min-width: 36px;
+  height: 36px;
+  padding: 0 8px;
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-radius: 8px;
+  background: rgba(22, 27, 34, 0.92);
+  color: #e6edf3;
+  border: 1px solid #484f58;
+}
+
+#pause-keyboard-btn:hover,
+#pause-keyboard-btn.on {
+  background: rgba(88, 166, 255, 0.18);
+  border-color: #58a6ff;
+  color: #79c0ff;
+}
+
+#keyboard-toggle-btn.on {
+  color: #58a6ff;
+  border-color: #58a6ff;
+  background: rgba(88, 166, 255, 0.1);
+}
+
+/* Pause keyboard sits above the canvas, not inside the overlay */
+#game-wrapper > #keyboard-panel.pause-float {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 25;
+  border-top: 1px solid #30363d;
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.45);
+}

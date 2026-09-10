@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Stickman Commando</title>
+  <link rel="icon" type="image/x-icon" href="favicon.ico" sizes="16x16 24x24 32x32 48x48 64x64 256x256">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -35,6 +38,7 @@
     <div id="play-controls" hidden>
       <button id="speed-btn" type="button" aria-label="Game speed">1×</button>
       <button id="pause-btn" type="button" aria-label="Pause (P)">⏸</button>
+      <button id="pause-keyboard-btn" type="button" class="toggle-btn" hidden aria-label="Toggle keyboard" title="Keyboard">Keys</button>
       <button id="exit-btn" type="button" aria-label="Home · back to menu" title="Home · back to menu">⌂</button>
     </div>
 
@@ -45,11 +49,20 @@
         <p id="overlay-hint">↑ ↓ ← → move &nbsp;·&nbsp; SPACE shoot &nbsp;·&nbsp; mouse aim</p>
         <div id="mode-picker" hidden></div>
       </div>
+      <div id="keyboard-panel" hidden aria-hidden="true">
+        <div class="keyboard-toolbar">
+          <button id="keyboard-scroll-left" type="button" aria-label="Scroll left one octave">‹</button>
+          <span id="keyboard-range-label">C3–C5</span>
+          <button id="keyboard-scroll-right" type="button" aria-label="Scroll right one octave">›</button>
+        </div>
+        <div id="keyboard-keys" role="group" aria-label="Synth keyboard"></div>
+      </div>
       <div id="overlay-actions">
         <button id="resume-btn" type="button" class="toggle-btn" hidden>Continue</button>
         <button id="start-btn" type="button" hidden>Deploy</button>
         <button id="model-btn" type="button" class="toggle-btn" hidden>Model · Classic</button>
         <button id="autoshoot-btn" type="button" class="toggle-btn">Auto: OFF</button>
+        <button id="keyboard-toggle-btn" type="button" class="toggle-btn" aria-label="Toggle keyboard" title="Keyboard">Keys</button>
       </div>
     </div>
 
@@ -65,6 +78,7 @@
   </div>
 
   <script src="js/audio.js"></script>
+  <script src="js/keyboard.js"></script>
   <script src="js/gore.js"></script>
   <script src="js/characters.js"></script>
   <script src="js/shared.js"></script>

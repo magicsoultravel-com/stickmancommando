@@ -44,6 +44,8 @@ Load order matters (`index.html`): `audio → gore → characters → shared →
 
 Core banners: use `g.showBanner(text, seconds)` — it is ticked centrally in `game.js` (`tickBanner`). Do not use raw `setTimeout` for banners.
 
+Favicon: `npm run favicon` regenerates `favicon.png`, `favicon.ico` and `apple-touch-icon.png` from `scripts/make-favicon.js` (pure stdlib, no deps) — a mini sage model shooting on the `#hud h1` background `#58a6ff`; `favicon.svg` is the hand-authored source of truth.
+
 ## GitHub Pages setup
 
 1. Push this repo to GitHub

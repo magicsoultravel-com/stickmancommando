@@ -31,6 +31,9 @@
   var scoreEl = document.getElementById('score');
   var highScoreEl = document.getElementById('high-score');
   var gameWrapper = document.getElementById('game-wrapper');
+  var keyboardToggleBtn = document.getElementById('keyboard-toggle-btn');
+  var pauseKeyboardBtn = document.getElementById('pause-keyboard-btn');
+  var keyboardWanted = false;
 
   var ZOMBIE_GRID = 48;
   var AUTO_SHOOT_KEY = 'stickmanCommandoAutoshoot';
@@ -153,6 +156,50 @@
   }
 
   // ── Pause ────────────────────────────────────────────────────────────
+  function syncKeyboardUi() {
+    if (!window.GameKeyboard) return;
+    var canShow =
+      state === STATE.MODES ||
+      state === STATE.INTRO ||
+      state === STATE.GAMEOVER ||
+      (state === STATE.PLAYING && paused);
+    if (pauseKeyboardBtn) {
+      pauseKeyboardBtn.hidden = !(state === STATE.PLAYING && paused);
+    }
+    if (keyboardToggleBtn) {
+      keyboardToggleBtn.hidden = !(
+        state === STATE.MODES || state === STATE.INTRO || state === STATE.GAMEOVER
+      );
+    }
+    if (!canShow) {
+      GameKeyboard.hide();
+      return;
+    }
+    if (keyboardWanted) {
+      GameKeyboard.show({ pauseFloat: state === STATE.PLAYING && paused });
+    } else {
+      GameKeyboard.hide();
+    }
+  }
+
+  function toggleKeyboardPanel() {
+    if (!window.GameKeyboard) return;
+    keyboardWanted = !keyboardWanted;
+    GameAudio.resume();
+    syncKeyboardUi();
+  }
+
+  function playModeDemo(modeId) {
+    GameAudio.resume();
+    var opts = {};
+    if (window.GameKeyboard && GameKeyboard.isOpen()) {
+      opts.onNote = function (n) {
+        GameKeyboard.highlightDemoNote(n.freq, n.dur);
+      };
+    }
+    GameAudio.playModeTune(modeId, opts);
+  }
+
   function resetPauseUi() {
     paused = false;
     if (pauseBtn) {
@@ -162,6 +209,7 @@
     if (gameWrapper) gameWrapper.classList.remove('paused');
     waveBanner.classList.remove('visible');
     bannerTimer = 0;
+    syncKeyboardUi();
   }
 
   function togglePause() {
@@ -179,6 +227,7 @@
     } else {
       waveBanner.classList.remove('visible');
     }
+    syncKeyboardUi();
   }
 
   // ── Continue-from-death snapshot ─────────────────────────────────────
@@ -571,16 +620,14 @@
       card.addEventListener('click', function (e) {
         if (e.target.classList.contains('mode-chevron')) return;
         selectMode(entry.id);
-        GameAudio.resume();
-        GameAudio.playModeTune(entry.id);
+        playModeDemo(entry.id);
       });
 
       card.querySelector('.mode-chevron').addEventListener('click', function (e) {
         e.stopPropagation();
         allModesExpanded = !allModesExpanded;
         selectMode(entry.id);
-        GameAudio.resume();
-        GameAudio.playModeTune(entry.id);
+        playModeDemo(entry.id);
       });
 
       modePicker.appendChild(card);
@@ -722,12 +769,15 @@
       });
       overlaySubtitle.after(board);
     }
+
+    syncKeyboardUi();
   }
 
   function hideOverlay() {
     overlay.classList.add('hidden');
     var existingBoard = document.getElementById('mock-leaderboard');
     if (existingBoard) existingBoard.remove();
+    syncKeyboardUi();
   }
 
   function startIntro() {
@@ -758,7 +808,7 @@
       showPicker: true, showDeploy: true, deployLabel: 'Deploy',
       showResume: true
     });
-    GameAudio.playModeTune(currentModeId);
+    playModeDemo(currentModeId);
   }
 
   function launchGame() {
@@ -1150,7 +1200,12 @@
     keys[e.key] = true;
 
     if (e.key === ' ' && state === STATE.MODES && !startBtn.hidden) {
-      launchGame();
+      var t = e.target;
+      if (t && (t.closest && t.closest('#keyboard-panel'))) {
+        // Space on a key button should only play the note, not deploy
+      } else {
+        launchGame();
+      }
     }
     if ((e.key === 'p' || e.key === 'P' || e.key === 'Escape') && state === STATE.PLAYING) {
       togglePause();
@@ -1199,6 +1254,19 @@
 
   modelModalClose.addEventListener('click', closeModelModal);
   modelModal.querySelector('.modal-backdrop').addEventListener('click', closeModelModal);
+
+  if (keyboardToggleBtn) {
+    keyboardToggleBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      toggleKeyboardPanel();
+    });
+  }
+  if (pauseKeyboardBtn) {
+    pauseKeyboardBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      toggleKeyboardPanel();
+    });
+  }
 
   // No implicit launch from clicking empty overlay space — starting a game
   // is always an explicit Deploy/Continue button press (or Space on the menu).

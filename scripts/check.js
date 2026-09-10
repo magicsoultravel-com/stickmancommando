@@ -7,7 +7,7 @@ const { execSync } = require('child_process');
 
 const root = path.join(__dirname, '..');
 const jsFiles = [
-  'js/audio.js', 'js/gore.js', 'js/characters.js', 'js/shared.js',
+  'js/audio.js', 'js/keyboard.js', 'js/gore.js', 'js/characters.js', 'js/shared.js',
   'js/xl-mode.js', 'js/game.js', 'js/modes/registry.js',
   'js/modes/horde-survival.js',
   'js/modes/waves.js',
@@ -54,7 +54,7 @@ if (/setTimeout\(function \(\) \{ g\.ui\.waveBanner/.test(src)) bad('raw setTime
 // 4) script order in index.html
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const order = [...html.matchAll(/src="([^"]+)"/g)].map((m) => m[1]);
-const need = ['js/audio.js', 'js/shared.js', 'js/xl-mode.js', 'js/modes/registry.js', 'js/game.js'];
+const need = ['js/audio.js', 'js/keyboard.js', 'js/shared.js', 'js/xl-mode.js', 'js/modes/registry.js', 'js/game.js'];
 let lastIdx = -1;
 for (const n of need) {
   const i = order.indexOf(n);
@@ -78,6 +78,20 @@ for (const key of ['SAVE_KEY = \'stickmanCommandoSave\'', "WAVES_BEST_KEY = 'sti
   if (gs.includes(key)) ok('game ' + key.split(' =')[0]);
   else bad('missing game key ' + key);
 }
+
+// 6) synth keyboard
+if (!html.includes('id="keyboard-panel"')) bad('keyboard panel missing in index.html');
+else ok('keyboard panel in index.html');
+if (!html.includes('id="keyboard-toggle-btn"')) bad('keyboard toggle missing in index.html');
+else ok('keyboard toggle in index.html');
+if (!html.includes('js/keyboard.js')) bad('keyboard.js not in index.html');
+else ok('keyboard.js in index.html');
+if (!audio.includes('playKeyNote')) bad('playKeyNote missing in audio.js');
+else ok('audio playKeyNote');
+if (!gs.includes('function playModeDemo')) bad('playModeDemo missing in game.js');
+else ok('game playModeDemo');
+if (!gs.includes('function syncKeyboardUi')) bad('syncKeyboardUi missing in game.js');
+else ok('game syncKeyboardUi');
 
 if (fail) { console.error(fail + ' check(s) failed'); process.exit(1); }
 console.log('all checks passed');
