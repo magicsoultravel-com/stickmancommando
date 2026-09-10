@@ -24,6 +24,9 @@
   window.GameModes = {
     register: function (mode) {
       if (!mode || !mode.id) return;
+      if (modes[mode.id] && modes[mode.id] !== mode) {
+        console.warn('GameModes: duplicate registration for "' + mode.id + '" — overwriting');
+      }
       modes[mode.id] = mode;
       if (order.indexOf(mode.id) === -1) order.push(mode.id);
     },

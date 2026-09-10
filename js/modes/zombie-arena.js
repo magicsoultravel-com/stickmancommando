@@ -40,9 +40,7 @@
     else y = S.snapGrid(y, g.ZOMBIE_GRID);
     S.spawnEnemyAt(g, x, y, 'brute');
     g.shakeTimer = Math.max(g.shakeTimer || 0, 0.35);
-    g.ui.waveBanner.textContent = 'FAT BRUTE!';
-    g.ui.waveBanner.classList.add('visible');
-    setTimeout(function () { g.ui.waveBanner.classList.remove('visible'); }, 1400);
+    g.showBanner('FAT BRUTE!', 1.4);
   }
 
   GameModes.register({
@@ -107,9 +105,7 @@
       if (g.comboCount > 1) {
         g.score += g.comboCount * 3;
         if (g.comboCount % 5 === 0) {
-          g.ui.waveBanner.textContent = 'COMBO x' + g.comboCount;
-          g.ui.waveBanner.classList.add('visible');
-          setTimeout(function () { g.ui.waveBanner.classList.remove('visible'); }, 900);
+          g.showBanner('COMBO x' + g.comboCount, 0.9);
         }
       }
       if (enemy.isBrute && window.Gore) {

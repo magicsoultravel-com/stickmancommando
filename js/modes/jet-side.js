@@ -175,9 +175,7 @@
       g.jetKills += 1;
       if (g.jetKills % 12 === 0) {
         g.jetTier += 1;
-        g.ui.waveBanner.textContent = 'ACE WAVE ' + (g.jetTier + 1);
-        g.ui.waveBanner.classList.add('visible');
-        setTimeout(function () { g.ui.waveBanner.classList.remove('visible'); }, 1400);
+        g.showBanner('ACE WAVE ' + (g.jetTier + 1), 1.4);
       }
     },
 

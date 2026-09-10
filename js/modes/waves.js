@@ -23,12 +23,9 @@
       if (g.wave.phase === 'break') {
         g.wave.breakTimer -= dt;
         g.wave.bannerTimer -= dt;
-        if (g.wave.bannerTimer <= 0) g.ui.waveBanner.classList.remove('visible');
         if (g.wave.breakTimer <= 0) {
           g.wave.phase = 'fight';
-          g.ui.waveBanner.textContent = 'Fight!';
-          g.wave.bannerTimer = 1;
-          g.ui.waveBanner.classList.add('visible');
+          g.showBanner('Fight!', 1);
         }
         return;
       }
@@ -39,7 +36,7 @@
       if (g.wave.phase === 'fight' && g.enemies.length === 0 && g.wave.toSpawn === 0) {
         g.player.health = Math.min(g.player.maxHealth, g.player.health + 12 + g.wave.number * 2);
         g.score += 20 + g.wave.number * 10;
-        g.ui.waveBanner.textContent = 'Wave ' + g.wave.number + ' cleared!';
+        g.showBanner('Wave ' + g.wave.number + ' cleared!', 2);
         startNextWave(g);
       }
     },
@@ -79,7 +76,6 @@
     g.wave.phase = 'break';
     g.wave.breakTimer = 2.5;
     g.wave.bannerTimer = 2;
-    g.ui.waveBanner.textContent = 'Wave ' + g.wave.number;
-    g.ui.waveBanner.classList.add('visible');
+    g.showBanner('Wave ' + g.wave.number, 2);
   }
 })();

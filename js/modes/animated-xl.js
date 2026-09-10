@@ -98,9 +98,7 @@
       if (!g.exploredEast && g.player.x > XLMode.SPLIT_X * XLMode.TILE) {
         g.exploredEast = true;
         g.score += 75;
-        g.ui.waveBanner.textContent = 'Wild east discovered +75';
-        g.ui.waveBanner.classList.add('visible');
-        setTimeout(function () { g.ui.waveBanner.classList.remove('visible'); }, 1600);
+        g.showBanner('Wild east discovered +75', 1.6);
       }
 
       g.camera.x = g.player.x - g.canvas.width / 2;

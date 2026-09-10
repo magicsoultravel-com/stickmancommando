@@ -63,6 +63,7 @@
   var camera = { x: 0, y: 0 };
   var animTime = 0;
   var obstacles = [];
+  var bannerTimer = 0;
 
   var score = 0;
   var highScore = 0;
@@ -124,8 +125,25 @@
     getWorldMouse: getWorldMouse,
     hurtPlayer: hurtPlayer,
     updateHud: updateHud,
+    showBanner: showBanner,
     endGame: function () { endGame(); }
   };
+
+  function showBanner(text, duration) {
+    waveBanner.textContent = text;
+    waveBanner.classList.add('visible');
+    bannerTimer = duration != null ? duration : 1.4;
+  }
+
+  function tickBanner(dt) {
+    if (bannerTimer > 0) {
+      bannerTimer -= dt;
+      if (bannerTimer <= 0) {
+        bannerTimer = 0;
+        waveBanner.classList.remove('visible');
+      }
+    }
+  }
 
   function syncGRefs() {
     g.player = player;
@@ -182,7 +200,25 @@
   }
 
   function resolveMode() {
-    return GameModes.get(currentModeId) || GameModes.get('zombie');
+    var m = GameModes.get(currentModeId) || GameModes.get('zombie');
+    if (!m) {
+      console.error('No modes registered; falling back to stub');
+      return { id: 'stub', name: 'Stub', desc: '', hint: '', flags: {} };
+    }
+    return m;
+  }
+
+  // Back-compat: some modes still write g.ui.waveBanner directly.
+  // Route those writes through the central banner timer.
+  function armWaveBannerCompat() {
+    if (!waveBanner || waveBanner.__bannerPatched) return;
+    waveBanner.__bannerPatched = true;
+    var origAdd = waveBanner.classList.add.bind(waveBanner.classList);
+    waveBanner.classList.add = function (cls) {
+      var r = origAdd.apply(null, arguments);
+      if (cls === 'visible' && bannerTimer <= 0) bannerTimer = 1.4;
+      return r;
+    };
   }
 
   function flag(name) {
@@ -190,6 +226,7 @@
   }
 
   syncModelBtn();
+  armWaveBannerCompat();
   mode = resolveMode();
   buildModePicker();
   setCanvasForMode();
@@ -859,12 +896,13 @@
     var dt = Math.min((timestamp - lastTime) / 1000, 0.05);
     lastTime = timestamp;
     try {
+      tickBanner(dt * gameSpeed);
       if (state === STATE.PLAYING) {
         update(dt * gameSpeed);
       }
       render();
     } catch (err) {
-      console.error('Game loop error:', err);
+      console.error('Game loop error [mode=' + currentModeId + ' state=' + state + ']:', err);
     }
     requestAnimationFrame(loop);
   }

@@ -83,9 +83,7 @@
     }
     layoutFormation(g);
     g.shields = createShields(g);
-    g.ui.waveBanner.textContent = 'Wave ' + form.wave;
-    g.ui.waveBanner.classList.add('visible');
-    setTimeout(function () { g.ui.waveBanner.classList.remove('visible'); }, 1200);
+    g.showBanner('Wave ' + form.wave, 1.2);
   }
 
   function livingInColumn(g, col) {

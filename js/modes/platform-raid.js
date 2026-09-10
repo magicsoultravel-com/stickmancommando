@@ -165,10 +165,8 @@
 
   function loadLevel(g, index) {
     if (index >= LEVELS.length) {
-      g.ui.waveBanner.textContent = 'SECTOR CLEAR!';
-      g.ui.waveBanner.classList.add('visible');
+      g.showBanner('SECTOR CLEAR!', 2);
       g.score += 500;
-      setTimeout(function () { g.ui.waveBanner.classList.remove('visible'); }, 2000);
       index = 0;
     }
     g.platformLevelIndex = index;
@@ -180,9 +178,7 @@
     g.player.climbing = null;
     g.player.animPhase = 0;
     spawnLevelEnemies(g);
-    g.ui.waveBanner.textContent = level.name;
-    g.ui.waveBanner.classList.add('visible');
-    setTimeout(function () { g.ui.waveBanner.classList.remove('visible'); }, 1400);
+    g.showBanner(level.name, 1.4);
   }
 
   function updatePlayer(g, dt) {

@@ -74,11 +74,6 @@
       { freq: 247, type: 'triangle' },
       { freq: 294, dur: 0.35, gap: 0.45 }
     ],
-    animatedxl: [
-      { freq: 196, type: 'triangle' },
-      { freq: 247, type: 'triangle' },
-      { freq: 294, dur: 0.35, gap: 0.45 }
-    ],
     dronedrive: [
       { freq: 130, type: 'square' },
       { freq: 98, type: 'square' },
@@ -88,6 +83,21 @@
       { freq: 330, type: 'sawtooth' },
       { freq: 392, type: 'sawtooth' },
       { freq: 523, dur: 0.25, gap: 0.35 }
+    ],
+    stickinvaders: [
+      { freq: 330, type: 'sawtooth' },
+      { freq: 392, type: 'sawtooth' },
+      { freq: 523, dur: 0.25, gap: 0.35 }
+    ],
+    platform: [
+      { freq: 165, type: 'triangle' },
+      { freq: 196, type: 'triangle' },
+      { freq: 220, dur: 0.35, gap: 0.5 }
+    ],
+    sticktetris: [
+      { freq: 262, type: 'triangle' },
+      { freq: 330, type: 'triangle' },
+      { freq: 392, dur: 0.3, gap: 0.4 }
     ],
     shooters: [
       { freq: 147, type: 'square' },
@@ -116,10 +126,15 @@
     ]
   };
 
+  var DEFAULT_TUNE = [
+    { freq: 220, type: 'triangle' },
+    { freq: 277, type: 'triangle' },
+    { freq: 330, dur: 0.3, gap: 0.4 }
+  ];
+
   function playModeTune(modeId) {
     resume();
-    var tune = MODE_TUNES[modeId];
-    if (!tune) return;
+    var tune = MODE_TUNES[modeId] || DEFAULT_TUNE;
     playMotif(tune, 0.12);
   }
 

@@ -161,9 +161,7 @@
       t.lines += cleared;
       t.level = 1 + Math.floor(t.lines / 10);
       t.dropInterval = Math.max(0.08, 0.85 - t.level * 0.06);
-      g.ui.waveBanner.textContent = cleared === 4 ? 'BONK TETRIS!' : 'Cleared ' + cleared;
-      g.ui.waveBanner.classList.add('visible');
-      setTimeout(function () { g.ui.waveBanner.classList.remove('visible'); }, 700);
+      g.showBanner(cleared === 4 ? 'BONK TETRIS!' : 'Cleared ' + cleared, 0.7);
       g.updateHud();
     }
   }
