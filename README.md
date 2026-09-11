@@ -15,7 +15,7 @@ Play locally by opening `index.html` (or `npm run dev`), or deploy to [GitHub Pa
 | Space | Start / redeploy |
 | Space / Click | Continue (on death) |
 
-> **Continue**: die, then hit **Continue** (or `Space`/click the KIA overlay) to resume the exact run you died in — score, wave, position, enemies and pickups are restored. Quitting mid-run with the **×** button also leaves a save on the menu. A fresh **Deploy** always starts a clean run.
+> **Continue**: each mode keeps its own checkpoint (`stickmanCommandoSave_<id>`). Die or quit mid-run to save it; **Continue** restores that exact run. A fresh **Deploy** does not wipe it — the checkpoint stays until you reach a better score in that mode (equal-or-better deaths/exits replace it; worse ones leave the old save).
 
 Mode-specific: Jet Side uses ↑ ↓ for lanes + → thrust; Platform uses ← → walk + ↑ ↓ ladders + mouse aim; Stick Tetris uses ← → move, ↑ rotate, ↓ soft drop, SPACE slam; Stick Invaders uses ← → move + SPACE.
 

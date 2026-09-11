@@ -62,7 +62,7 @@
         whiteKeys.push(btn);
       }
       allKeys.push({ el: btn, midi: midi, freq: freq, name: name, isBlack: black });
-      bindKey(btn, freq);
+      bindKey(btn);
     }
 
     // Append whites first so flex layout is correct, then overlay blacks
@@ -100,16 +100,140 @@
     });
   }
 
-  function bindKey(btn, freq) {
-    function strike(e) {
-      e.preventDefault();
-      if (window.GameAudio) {
-        GameAudio.resume();
-        GameAudio.playKeyNote(freq);
-      }
-      flash(btn, 0.22);
+  var drawing = false;
+  var lastDrawEl = null;
+  var arpPattern = 'off';
+  var arpRateMs = 150;
+  var arpTimer = null;
+  var arpStep = 0;
+  var arpRootMidi = null;
+
+  var ARP_PATTERNS = {
+    // Scale degrees → semitone offsets from the held root
+    '135': [0, 4, 7],
+    '1b35': [0, 3, 7],
+    '157': [0, 7, 11],
+    '158': [0, 7, 12],
+    '1585': [0, 7, 12, 7],
+    '1358': [0, 4, 7, 12],
+    '1b358': [0, 3, 7, 12],
+    'updown': [0, 4, 7, 12, 7, 4]
+  };
+
+  function getArpOffsets() {
+    return ARP_PATTERNS[arpPattern] || null;
+  }
+
+  function arpEnabled() {
+    return !!getArpOffsets();
+  }
+
+  function stopArp() {
+    if (arpTimer) {
+      clearInterval(arpTimer);
+      arpTimer = null;
     }
-    btn.addEventListener('pointerdown', strike);
+    arpStep = 0;
+    arpRootMidi = null;
+  }
+
+  function midiKeyEl(midi) {
+    for (var i = 0; i < allKeys.length; i++) {
+      if (allKeys[i].midi === midi) return allKeys[i].el;
+    }
+    return null;
+  }
+
+  function playArpStep() {
+    var offsets = getArpOffsets();
+    if (!offsets || arpRootMidi == null || !window.GameAudio) return;
+    var midi = arpRootMidi + offsets[arpStep % offsets.length];
+    arpStep += 1;
+    // Keep sounding notes inside the keyboard range by octave-wrapping
+    while (midi > END_MIDI) midi -= 12;
+    while (midi < START_MIDI) midi += 12;
+    var freq = midiToFreq(midi);
+    var noteDur = Math.min(0.28, (arpRateMs / 1000) * 0.85);
+    GameAudio.playKeyNote(freq, noteDur);
+    flash(midiKeyEl(midi), noteDur);
+  }
+
+  function startArp(rootMidi) {
+    stopArp();
+    if (!arpEnabled() || rootMidi == null) return;
+    arpRootMidi = rootMidi;
+    arpStep = 0;
+    if (window.GameAudio) GameAudio.resume();
+    playArpStep();
+    arpTimer = setInterval(playArpStep, arpRateMs);
+  }
+
+  function syncArpRateDisabled() {
+    var rate = document.getElementById('keyboard-arp-rate');
+    if (rate) rate.disabled = !arpEnabled();
+  }
+
+  function strikeEl(el) {
+    if (!el || !el.dataset || !el.dataset.freq) return;
+    if (el === lastDrawEl) return;
+    lastDrawEl = el;
+    var freq = parseFloat(el.dataset.freq);
+    var midi = parseInt(el.dataset.midi, 10);
+    if (arpEnabled()) {
+      startArp(midi);
+      return;
+    }
+    if (window.GameAudio) {
+      GameAudio.resume();
+      GameAudio.playKeyNote(freq);
+    }
+    flash(el, 0.22);
+  }
+
+  function keyFromPoint(x, y) {
+    var stack = document.elementsFromPoint ? document.elementsFromPoint(x, y) : [document.elementFromPoint(x, y)];
+    for (var i = 0; i < stack.length; i++) {
+      var el = stack[i];
+      if (!el) continue;
+      if (el.classList && (el.classList.contains('kb-white') || el.classList.contains('kb-black'))) {
+        return el;
+      }
+    }
+    return null;
+  }
+
+  function onPointerDown(e) {
+    if (e.button != null && e.button !== 0) return;
+    var el = keyFromPoint(e.clientX, e.clientY);
+    if (!el) return;
+    e.preventDefault();
+    drawing = true;
+    lastDrawEl = null;
+    if (keysEl.setPointerCapture) {
+      try { keysEl.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+    }
+    strikeEl(el);
+  }
+
+  function onPointerMove(e) {
+    if (!drawing) return;
+    e.preventDefault();
+    strikeEl(keyFromPoint(e.clientX, e.clientY));
+  }
+
+  function onPointerUp(e) {
+    if (!drawing) return;
+    drawing = false;
+    lastDrawEl = null;
+    stopArp();
+    if (keysEl.releasePointerCapture) {
+      try { keysEl.releasePointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+    }
+  }
+
+  function bindKey(btn) {
+    // Pointer handlers live on #keyboard-keys so drag-glide works across keys.
+    btn.style.touchAction = 'none';
   }
 
   function flash(el, dur) {
@@ -246,6 +370,9 @@
   function hide() {
     open = false;
     pauseFloat = false;
+    stopArp();
+    drawing = false;
+    lastDrawEl = null;
     applyVisibility();
   }
 
@@ -273,17 +400,66 @@
     flash(key.el, dur || 0.22);
   }
 
+  function wireSelect(el, onChange) {
+    if (!el) return;
+    el.addEventListener('change', onChange);
+    el.addEventListener('pointerdown', function (e) { e.stopPropagation(); });
+    el.addEventListener('click', function (e) { e.stopPropagation(); });
+  }
+
   function init() {
     ensureEls();
     // Keys are built lazily on first show so layout widths are real.
     var left = document.getElementById('keyboard-scroll-left');
     var right = document.getElementById('keyboard-scroll-right');
+    var voiceSelect = document.getElementById('keyboard-voice');
+    var arpSelect = document.getElementById('keyboard-arp');
+    var rateSelect = document.getElementById('keyboard-arp-rate');
     if (left) left.addEventListener('click', function () { scrollOctave(-1); });
     if (right) right.addEventListener('click', function () { scrollOctave(1); });
+    if (voiceSelect) {
+      if (window.GameAudio && GameAudio.getKeyVoice) {
+        voiceSelect.value = GameAudio.getKeyVoice();
+      }
+      wireSelect(voiceSelect, function () {
+        if (window.GameAudio) {
+          GameAudio.setKeyVoice(voiceSelect.value);
+          GameAudio.resume();
+          GameAudio.playKeyNote(261.63, 0.22);
+        }
+      });
+    }
+    if (arpSelect) {
+      arpPattern = arpSelect.value || 'off';
+      wireSelect(arpSelect, function () {
+        arpPattern = arpSelect.value || 'off';
+        syncArpRateDisabled();
+        if (drawing && lastDrawEl && arpEnabled()) {
+          startArp(parseInt(lastDrawEl.dataset.midi, 10));
+        } else if (!arpEnabled()) {
+          stopArp();
+        }
+      });
+    }
+    if (rateSelect) {
+      arpRateMs = parseInt(rateSelect.value, 10) || 150;
+      wireSelect(rateSelect, function () {
+        arpRateMs = parseInt(rateSelect.value, 10) || 150;
+        if (drawing && lastDrawEl && arpEnabled()) {
+          startArp(parseInt(lastDrawEl.dataset.midi, 10));
+        }
+      });
+    }
+    syncArpRateDisabled();
     if (keysEl) {
       keysEl.addEventListener('scroll', function () {
         updateRangeLabel();
       });
+      keysEl.addEventListener('pointerdown', onPointerDown);
+      keysEl.addEventListener('pointermove', onPointerMove);
+      keysEl.addEventListener('pointerup', onPointerUp);
+      keysEl.addEventListener('pointercancel', onPointerUp);
+      keysEl.addEventListener('lostpointercapture', onPointerUp);
     }
   }
 

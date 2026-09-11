@@ -39,7 +39,8 @@
   var AUTO_SHOOT_KEY = 'stickmanCommandoAutoshoot';
   var CHARACTER_KEY = 'stickmanCommandoCharacter';
   var HIGH_SCORE_PREFIX = 'stickmanCommandoHighScore_';
-  var SAVE_KEY = 'stickmanCommandoSave';
+  var SAVE_KEY_PREFIX = 'stickmanCommandoSave_';
+  var LEGACY_SAVE_KEY = 'stickmanCommandoSave';
   var WAVES_BEST_KEY = 'stickmanCommandoWavesBest';
   var INVADERS_BEST_KEY = 'stickmanCommandoInvadersBest';
   var STATE = { INTRO: 'intro', MODES: 'modes', PLAYING: 'playing', GAMEOVER: 'gameover' };
@@ -89,7 +90,7 @@
   var gameSpeed = 1;
   var allModesExpanded = false;
   var paused = false;
-  var lastSave = null;
+  var lastSaves = {};
 
   var g = {
     canvas: canvas,
@@ -276,33 +277,73 @@
     return snap;
   }
 
-  function persistSave() {
+  function saveKeyFor(modeId) {
+    return SAVE_KEY_PREFIX + modeId;
+  }
+
+  function migrateLegacySave() {
     try {
-      lastSave = buildSnapshot();
-      localStorage.setItem(SAVE_KEY, JSON.stringify(lastSave));
+      var raw = localStorage.getItem(LEGACY_SAVE_KEY);
+      if (!raw) return;
+      var snap = JSON.parse(raw);
+      if (snap && snap.player && snap.modeId) {
+        localStorage.setItem(saveKeyFor(snap.modeId), raw);
+        lastSaves[snap.modeId] = snap;
+      }
+      localStorage.removeItem(LEGACY_SAVE_KEY);
+    } catch (err) { /* ignore corrupt legacy */ }
+  }
+
+  migrateLegacySave();
+
+  // Keep the best checkpoint per mode. Deploy does not clear it; only a
+  // equal-or-better score replaces it (see persistSave).
+  function persistSave(modeId) {
+    modeId = modeId || currentModeId;
+    try {
+      var snap = buildSnapshot();
+      snap.modeId = modeId;
+      var existing = loadSave(modeId);
+      if (existing && existing.player && (snap.score || 0) < (existing.score || 0)) {
+        return;
+      }
+      lastSaves[modeId] = snap;
+      localStorage.setItem(saveKeyFor(modeId), JSON.stringify(snap));
     } catch (err) {
       console.warn('Save failed:', err);
     }
   }
 
-  function loadSave() {
-    if (lastSave) return lastSave;
+  function loadSave(modeId) {
+    modeId = modeId || currentModeId;
+    if (lastSaves[modeId]) return lastSaves[modeId];
     try {
-      var raw = localStorage.getItem(SAVE_KEY);
-      lastSave = raw ? JSON.parse(raw) : null;
+      var raw = localStorage.getItem(saveKeyFor(modeId));
+      lastSaves[modeId] = raw ? JSON.parse(raw) : null;
     } catch (err) {
-      lastSave = null;
+      lastSaves[modeId] = null;
     }
-    return lastSave;
+    return lastSaves[modeId];
   }
 
-  function clearSave() {
-    lastSave = null;
-    try { localStorage.removeItem(SAVE_KEY); } catch (err) { /* ignore */ }
+  function clearSave(modeId) {
+    modeId = modeId || currentModeId;
+    lastSaves[modeId] = null;
+    try { localStorage.removeItem(saveKeyFor(modeId)); } catch (err) { /* ignore */ }
+  }
+
+  function syncResumeButton() {
+    var snap = loadSave(currentModeId);
+    if (snap && snap.player) {
+      resumeBtn.hidden = false;
+      resumeBtn.textContent = 'Continue · ' + (snap.score || 0);
+    } else {
+      resumeBtn.hidden = true;
+    }
   }
 
   function resumeGame() {
-    var snap = loadSave();
+    var snap = loadSave(currentModeId);
     if (!snap || !snap.player) return;
     paused = false;
 
@@ -357,7 +398,8 @@
     hudAutoshoot.hidden = false;
     loadHighScoreForMode(currentModeId);
     updateHud();
-    clearSave();
+    // Checkpoint stays until a better score replaces it — Deploy/Continue
+    // do not wipe the per-mode save.
     GameAudio.resume();
   }
 
@@ -572,7 +614,7 @@
     state = STATE.MODES;
     syncGRefs();
     // Keep a snapshot when quitting mid-run or after death so "Continue"
-    // is available from the menu. Fresh deploys clear it in resetGame().
+    // is available from the menu. Only replaced when score is equal-or-better.
     if (wasInGame && player) persistSave();
     setPlayControlsVisible(false);
     hudAutoshoot.hidden = true;
@@ -657,6 +699,10 @@
     overlayHint.textContent = mode.hint;
     overlaySubtitle.textContent = mode.desc;
     buildModePicker();
+    if (!overlay.classList.contains('hidden') &&
+        (state === STATE.MODES || state === STATE.GAMEOVER)) {
+      syncResumeButton();
+    }
   }
 
   function loadHighScoreForMode(modeId) {
@@ -679,7 +725,6 @@
   }
 
   function resetGame() {
-    clearSave();
     mode = resolveMode();
     setCanvasForMode();
     Gore.clear();
@@ -741,14 +786,10 @@
     closeModelModal();
     startBtn.textContent = options.deployLabel || 'Deploy';
 
-    // Continue-from-death: offer whenever a usable snapshot exists
+    // Continue-from-death: offer for this mode's checkpoint only
     resumeBtn.hidden = true;
     if (options.showResume) {
-      var snap = loadSave();
-      if (snap && snap.player) {
-        resumeBtn.hidden = false;
-        resumeBtn.textContent = 'Continue · ' + (snap.score || 0);
-      }
+      syncResumeButton();
     }
 
     var existingBoard = document.getElementById('mock-leaderboard');

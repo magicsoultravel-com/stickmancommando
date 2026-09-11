@@ -74,9 +74,18 @@ for (const fn of ['function togglePause', 'function resumeGame', 'function build
   if (gs.includes(fn)) ok('game ' + fn.replace('function ', ''));
   else bad('missing game fn ' + fn);
 }
-for (const key of ['SAVE_KEY = \'stickmanCommandoSave\'', "WAVES_BEST_KEY = 'stickmanCommandoWavesBest'", "INVADERS_BEST_KEY = 'stickmanCommandoInvadersBest'"]) {
+for (const key of ['SAVE_KEY_PREFIX = \'stickmanCommandoSave_\'', "WAVES_BEST_KEY = 'stickmanCommandoWavesBest'", "INVADERS_BEST_KEY = 'stickmanCommandoInvadersBest'"]) {
   if (gs.includes(key)) ok('game ' + key.split(' =')[0]);
   else bad('missing game key ' + key);
+}
+if (gs.includes('function syncResumeButton')) ok('game syncResumeButton');
+else bad('missing game fn syncResumeButton');
+if (gs.includes('LEGACY_SAVE_KEY')) ok('game LEGACY_SAVE_KEY');
+else bad('missing game LEGACY_SAVE_KEY');
+if (gs.includes('clearSave();') && /function resetGame\(\) \{\s*clearSave\(\)/.test(gs)) {
+  bad('resetGame should not clearSave (continues survive Deploy)');
+} else {
+  ok('resetGame does not clearSave');
 }
 
 // 6) synth keyboard
