@@ -17,7 +17,7 @@ Play locally by opening `index.html` (or `npm run dev`), or deploy to [GitHub Pa
 
 > **Continue**: each mode keeps its own checkpoint (`stickmanCommandoSave_<id>`). Die or quit mid-run to save it; **Continue** restores that exact run. A fresh **Deploy** does not wipe it — the checkpoint stays until you reach a better score in that mode (equal-or-better deaths/exits replace it; worse ones leave the old save).
 
-Mode-specific: Jet Side uses ↑ ↓ for lanes + → thrust; Platform uses ← → walk + ↑ ↓ ladders + mouse aim; Stick Tetris uses ← → move, ↑ rotate, ↓ soft drop, SPACE slam; Stick Invaders uses ← → move + SPACE; Sniper Range uses mouse aim + SPACE.
+Mode-specific: Jet Side uses ↑ ↓ for lanes + → thrust; Platform uses ← → walk + ↑ ↓ ladders + mouse aim; Stick Tetris uses ← → move, ↑ rotate, ↓ soft drop, SPACE slam; Stick Invaders uses ← → move + SPACE; Sniper Range uses mouse aim + SPACE; Roflcopter uses ↑↓←→ fly, SPACE/CTRL gun, SHIFT bomb, hover-still for rescue rope.
 
 ## Demo modes
 
@@ -30,6 +30,7 @@ After the intro sting, pick a demo from the grid:
 | **Drone Drive** (`dronedrive`, legacy key `dronechase`) | `js/modes/drone-drive.js` | Truck bed turret — aim crosshair on a bumpy road, shoot stick-drones |
 | **Platform Raid** (`platform`) | `js/modes/platform-raid.js` | Run, climb ladders, shoot — clear levels then reach the exit |
 | **Jet Side** (`jetside`, legacy key `sidescroll`) | `js/modes/jet-side.js` | Three-lane jetpack duel — thrust, dodge debris, hostiles shoot back |
+| **Roflcopter** (`roflcopter`) | `js/modes/roflcopter.js` | Sector-hop heli — bomb the west base, hover-rescue east hostages, random missions |
 | **Stick Invaders** (`stickinvaders`) | `js/modes/stick-invaders.js` | Formation shooter with shields/bunkers — don't let them land |
 | **Bomb Tetris** (`sticktetris`) | `js/modes/stick-tetris.js` | Bomb blocks fall — full rows detonate, launching exploding stickmen + flash/shake |
 | **Waves** (`waves`) | `js/modes/waves.js` | Clear a wave, breather, next wave. Best wave saved across runs and shown in the HUD |

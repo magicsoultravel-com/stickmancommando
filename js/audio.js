@@ -484,6 +484,11 @@
       { freq: 392, type: 'sawtooth' },
       { freq: 523, dur: 0.25, gap: 0.35 }
     ],
+    roflcopter: [
+      { freq: 110, type: 'sawtooth' },
+      { freq: 147, type: 'sawtooth' },
+      { freq: 98, dur: 0.4, vol: 1.1, gap: 0.5 }
+    ],
     stickinvaders: [
       { freq: 330, type: 'sawtooth' },
       { freq: 392, type: 'sawtooth' },

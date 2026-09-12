@@ -1,5 +1,5 @@
 // Minimal smoke check — no deps. Run: npm run check
-// 1) node --check every js file 2) registry has 12 ids 3) audio tunes cover all modes
+// 1) node --check every js file 2) registry has expected ids 3) audio tunes cover all modes
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -13,7 +13,7 @@ const jsFiles = [
   'js/modes/waves.js',
   'js/modes/stick-invaders.js', 'js/modes/platform-raid.js',
   'js/modes/animated-xl.js', 'js/modes/drone-drive.js',
-  'js/modes/jet-side.js', 'js/modes/stick-tetris.js',
+  'js/modes/jet-side.js', 'js/modes/roflcopter.js', 'js/modes/stick-tetris.js',
   'js/modes/sniper-range.js'
 ];
 
@@ -37,7 +37,7 @@ const src = jsFiles
   .map((f) => fs.readFileSync(path.join(root, f), 'utf8')).join('\n');
 const ids = [...src.matchAll(/id:\s*'([^']+)'/g)].map((m) => m[1])
   .filter((id) => !/^[A-Z]$/.test(id) && !['arena', 'animatedxl', 'dronechase', 'sidescroll'].includes(id));
-const expected = ['horde', 'zombie', 'shooters', 'medkits', 'variants', 'leaderboard', 'stickmanisland', 'dronedrive', 'jetside', 'stickinvaders', 'platform', 'sticktetris', 'waves', 'sniperrange'];
+const expected = ['horde', 'zombie', 'shooters', 'medkits', 'variants', 'leaderboard', 'stickmanisland', 'dronedrive', 'jetside', 'roflcopter', 'stickinvaders', 'platform', 'sticktetris', 'waves', 'sniperrange'];
 for (const id of expected) {
   if (ids.includes(id)) ok('mode id ' + id);
   else bad('missing mode id ' + id);

@@ -987,7 +987,7 @@
       return;
     }
 
-    if (keys[' '] || keys['Space']) shoot();
+    if (keys[' '] || keys['Space'] || keys['Control'] || keys['ControlLeft'] || keys['ControlRight']) shoot();
     else if (autoShoot) shoot();
 
     if (player.shootCooldown > 0) player.shootCooldown -= dt;
@@ -1235,10 +1235,12 @@
   }
 
   window.addEventListener('keydown', function (e) {
-    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].indexOf(e.key) !== -1) {
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'Shift', 'Control'].indexOf(e.key) !== -1) {
       e.preventDefault();
     }
     keys[e.key] = true;
+    if (e.key === 'Shift' || e.code === 'ShiftLeft' || e.code === 'ShiftRight') keys['Shift'] = true;
+    if (e.key === 'Control' || e.code === 'ControlLeft' || e.code === 'ControlRight') keys['Control'] = true;
 
     if (e.key === ' ' && state === STATE.MODES && !startBtn.hidden) {
       var t = e.target;
@@ -1255,6 +1257,8 @@
 
   window.addEventListener('keyup', function (e) {
     keys[e.key] = false;
+    if (e.key === 'Shift' || e.code === 'ShiftLeft' || e.code === 'ShiftRight') keys['Shift'] = false;
+    if (e.key === 'Control' || e.code === 'ControlLeft' || e.code === 'ControlRight') keys['Control'] = false;
   });
 
   startBtn.addEventListener('click', launchGame);
