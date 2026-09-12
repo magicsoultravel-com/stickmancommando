@@ -499,6 +499,11 @@
       { freq: 330, type: 'triangle' },
       { freq: 392, dur: 0.3, gap: 0.4 }
     ],
+    sniperrange: [
+      { freq: 196, type: 'sawtooth' },
+      { freq: 220, type: 'sawtooth' },
+      { freq: 246, dur: 0.4, vol: 0.9, gap: 0.55 }
+    ],
     shooters: [
       { freq: 147, type: 'square' },
       { freq: 175, type: 'square' },

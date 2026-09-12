@@ -17,7 +17,7 @@ Play locally by opening `index.html` (or `npm run dev`), or deploy to [GitHub Pa
 
 > **Continue**: each mode keeps its own checkpoint (`stickmanCommandoSave_<id>`). Die or quit mid-run to save it; **Continue** restores that exact run. A fresh **Deploy** does not wipe it — the checkpoint stays until you reach a better score in that mode (equal-or-better deaths/exits replace it; worse ones leave the old save).
 
-Mode-specific: Jet Side uses ↑ ↓ for lanes + → thrust; Platform uses ← → walk + ↑ ↓ ladders + mouse aim; Stick Tetris uses ← → move, ↑ rotate, ↓ soft drop, SPACE slam; Stick Invaders uses ← → move + SPACE.
+Mode-specific: Jet Side uses ↑ ↓ for lanes + → thrust; Platform uses ← → walk + ↑ ↓ ladders + mouse aim; Stick Tetris uses ← → move, ↑ rotate, ↓ soft drop, SPACE slam; Stick Invaders uses ← → move + SPACE; Sniper Range uses mouse aim + SPACE.
 
 ## Demo modes
 
@@ -33,6 +33,7 @@ After the intro sting, pick a demo from the grid:
 | **Stick Invaders** (`stickinvaders`) | `js/modes/stick-invaders.js` | Formation shooter with shields/bunkers — don't let them land |
 | **Bomb Tetris** (`sticktetris`) | `js/modes/stick-tetris.js` | Bomb blocks fall — full rows detonate, launching exploding stickmen + flash/shake |
 | **Waves** (`waves`) | `js/modes/waves.js` | Clear a wave, breather, next wave. Best wave saved across runs and shown in the HUD |
+| **Sniper Range** (`sniperrange`) | `js/modes/sniper-range.js` | Stationary gallery duel — pop-up stickmen telegraph their shots; drop them before they fire |
 
 Retired (merged into Horde, hidden from picker, old saves carry over): `zombie`, `shooters`, `medkits`, `variants`, `leaderboard`.
 
