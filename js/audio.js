@@ -533,6 +533,11 @@
       { freq: 220, type: 'square' },
       { freq: 277, type: 'square' },
       { freq: 330, dur: 0.35, vol: 0.9, gap: 0.45 }
+    ],
+    towerdefense: [
+      { freq: 131, type: 'square' },
+      { freq: 165, type: 'square' },
+      { freq: 196, dur: 0.35, vol: 0.9, gap: 0.45 }
     ]
   };
 

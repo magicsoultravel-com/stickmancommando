@@ -35,6 +35,7 @@ After the intro sting, pick a demo from the grid:
 | **Bomb Tetris** (`sticktetris`) | `js/modes/stick-tetris.js` | Bomb blocks fall — full rows detonate, launching exploding stickmen + flash/shake |
 | **Waves** (`waves`) | `js/modes/waves.js` | Clear a wave, breather, next wave. Best wave saved across runs and shown in the HUD |
 | **Sniper Range** (`sniperrange`) | `js/modes/sniper-range.js` | Stationary gallery duel — pop-up stickmen telegraph their shots; drop them before they fire |
+| **Tower Defense** (`towerdefense`) | `js/modes/tower-defense.js` | Fixed S-path, 4 towers x 4 upgrades, 5 waves. Build with mouse / 1-4, U upgrade, X sell |
 
 Retired (merged into Horde, hidden from picker, old saves carry over): `zombie`, `shooters`, `medkits`, `variants`, `leaderboard`.
 
